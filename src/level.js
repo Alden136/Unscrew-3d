@@ -81,8 +81,8 @@ const TEMPLATES = [
         part('arm-r', '#4d6fa8', 3, B(0.6, 1.8, 0.6, 1.55, 2.9, 0)),
         part('hand-l', '#7f8fa6', 2, B(0.7, 0.5, 0.7, -1.55, 1.75, 0)),
         part('hand-r', '#7f8fa6', 2, B(0.7, 0.5, 0.7, 1.55, 1.75, 0)),
-        part('foot-l', '#2b3a55', 2, B(1.0, 0.35, 1.3, -0.6, 0.58, 0.2)),
-        part('foot-r', '#2b3a55', 2, B(1.0, 0.35, 1.3, 0.6, 0.58, 0.2)),
+        part('foot-l', '#2b3a55', 2, B(1.0, 0.5, 1.3, -0.6, 0.65, 0.2)),
+        part('foot-r', '#2b3a55', 2, B(1.0, 0.5, 1.3, 0.6, 0.65, 0.2)),
       ];
     },
   },
@@ -242,6 +242,109 @@ function primCandidates(pr) {
   return out;
 }
 
+const _inv = new THREE.Matrix4();
+const _lp = new THREE.Vector3();
+
+/** Is a world-space point inside a primitive mesh (grown by `grow` units)? Primitives are convex. */
+export function insidePrim(mesh, point, grow = 0.02) {
+  _lp.copy(point).applyMatrix4(_inv.copy(mesh.matrixWorld).invert());
+  const pr = mesh.userData.prim;
+  const { x, y, z } = _lp;
+  switch (pr.t) {
+    case 'box':
+      return Math.abs(x) < pr.s[0] / 2 + grow && Math.abs(y) < pr.s[1] / 2 + grow && Math.abs(z) < pr.s[2] / 2 + grow;
+    case 'cyl': {
+      const [rt, rb, h] = pr.s;
+      if (Math.abs(y) >= h / 2 + grow) return false;
+      const t = THREE.MathUtils.clamp((y + h / 2) / h, 0, 1);
+      return Math.hypot(x, z) < rb + (rt - rb) * t + grow;
+    }
+    case 'dome':
+      return y > -grow && _lp.length() < pr.s[0] + grow;
+    case 'cone': {
+      const [r, h] = pr.s;
+      if (Math.abs(y) >= h / 2 + grow) return false;
+      const t = THREE.MathUtils.clamp(0.5 - y / h, 0, 1);
+      return Math.hypot(x, z) < r * t + grow;
+    }
+    default:
+      return false;
+  }
+}
+
+/** Sample points covering a screw head (centre column plus rim) sitting at `pos` facing `n`. */
+export function headPoints(pos, n) {
+  const t1 = new THREE.Vector3().crossVectors(n, Math.abs(n.y) > 0.9 ? new THREE.Vector3(1, 0, 0) : new THREE.Vector3(0, 1, 0)).normalize();
+  const t2 = new THREE.Vector3().crossVectors(n, t1);
+  const at = (h, a = 0, b = 0) => pos.clone().addScaledVector(n, h).addScaledVector(t1, a).addScaledVector(t2, b);
+  const r = 0.2;
+  return [at(0.04), at(0.15), at(0.08, r), at(0.08, -r), at(0.08, 0, r), at(0.08, 0, -r)];
+}
+
+/**
+ * Choose screw spots. A spot is legal when its head sits in open air and nothing belonging to the
+ * same or an earlier (inner) part, or to a decorative part, sits in front of it.
+ */
+function placeScrews(parts, allMeshes, decor, cfg, rng) {
+  const rc = new THREE.Raycaster();
+  rc.far = RAY_FAR;
+  const byPart = parts.map(() => []);
+  for (const p of parts) {
+    if (decor.has(p)) continue;
+    for (const m of p.meshes) {
+      const others = allMeshes.filter((x) => x !== m);
+      for (const c of primCandidates(m.userData.prim)) {
+        const pos = c.p.clone().applyMatrix4(m.matrixWorld);
+        const n = c.n.clone().transformDirection(m.matrixWorld);
+        if (n.y < -0.45) continue; // facing the floor: hard to see, skip
+        // The head must not be buried in, or clip into, any other primitive. (The ray test below
+        // only looks RAY_FAR ahead, so on its own it can't tell a spot is deep inside a big part.)
+        if (headPoints(pos, n).some((pt) => others.some((o) => insidePrim(o, pt)))) continue;
+        rc.set(pos.clone().addScaledVector(n, 0.01), n);
+        const hits = rc.intersectObjects(others, false);
+        const ok = hits.every((h) => {
+          const q = h.object.userData.part;
+          return q.index > p.index && !decor.has(q) && h.distance > 0.3;
+        });
+        if (ok) byPart[p.index].push({ part: p, pos, normal: n });
+      }
+    }
+  }
+
+  // Pick screws per part with a minimum spacing.
+  const chosen = [];
+  const minD2 = 0.6 * 0.6;
+  const farEnough = (pos) => chosen.every((c) => c.pos.distanceToSquared(pos) > minD2);
+  for (const p of parts) {
+    const list = shuffle(byPart[p.index], rng);
+    let count = 0;
+    for (const c of list) {
+      if (count >= p.target) break;
+      if (farEnough(c.pos)) { chosen.push(c); count++; }
+    }
+  }
+
+  // Clamp to the level budget and to a multiple of three, never stripping a part's last screw.
+  const countOf = (p) => chosen.filter((c) => c.part === p).length;
+  const removeOne = () => {
+    const pool = chosen.filter((c) => countOf(c.part) > 1);
+    if (!pool.length) return false;
+    const victim = pool[Math.floor(rng() * pool.length)];
+    chosen.splice(chosen.indexOf(victim), 1);
+    return true;
+  };
+  while (chosen.length > cfg.maxScrews && removeOne());
+  while (chosen.length % 3 !== 0) {
+    if (!removeOne()) {
+      // Every part is down to one screw: add spare ones instead.
+      const spare = parts.flatMap((p) => byPart[p.index]).find((c) => !chosen.includes(c) && farEnough(c.pos));
+      if (!spare) break;
+      chosen.push(spare);
+    }
+  }
+  return { chosen, countOf };
+}
+
 // ---------------------------------------------------------------------------
 // Level construction
 // ---------------------------------------------------------------------------
@@ -285,62 +388,26 @@ export function buildLevel(level) {
   root.updateMatrixWorld(true);
   const allMeshes = parts.flatMap((p) => p.meshes);
 
-  // 1. Gather legal candidate positions. A spot is legal when nothing belonging to the
-  //    same or an earlier (inner) part sits in front of it.
-  const rc = new THREE.Raycaster();
-  rc.far = RAY_FAR;
-  const byPart = parts.map(() => []);
-  for (const p of parts) {
-    for (const m of p.meshes) {
-      const others = allMeshes.filter((x) => x !== m);
-      for (const c of primCandidates(m.userData.prim)) {
-        const pos = c.p.clone().applyMatrix4(m.matrixWorld);
-        const n = c.n.clone().transformDirection(m.matrixWorld);
-        if (n.y < -0.45) continue; // facing the floor: hard to see, skip
-        rc.set(pos.clone().addScaledVector(n, 0.01), n);
-        const hits = rc.intersectObjects(others, false);
-        // Spots buried inside, or flush against, another part are rejected too.
-        const ok = hits.every((h) => h.object.userData.part.index > p.index && h.distance > 0.3);
-        if (ok) byPart[p.index].push({ part: p, pos, normal: n });
-      }
-    }
+  // Screw placement. Parts that end up with no screws are decorative. A decorative part never
+  // falls on its own, so it must never sit in front of a screw. Placement is repeated, treating
+  // decorative parts as off-limits, until the set of decorative parts stops growing.
+  const decor = new Set();
+  let placed;
+  for (let pass = 0; pass < 6; pass++) {
+    placed = placeScrews(parts, allMeshes, decor, cfg, mulberry32(cfg.seed + pass));
+    const fresh = parts.filter((p) => !decor.has(p) && placed.countOf(p) === 0);
+    if (!fresh.length) break;
+    fresh.forEach((p) => decor.add(p));
   }
+  const { chosen } = placed;
+  for (const p of parts) p.decor = decor.has(p);
 
-  // 2. Pick screws per part with a minimum spacing.
-  const chosen = [];
-  const minD2 = 0.6 * 0.6;
-  const farEnough = (pos) => chosen.every((c) => c.pos.distanceToSquared(pos) > minD2);
-  for (const p of parts) {
-    const list = shuffle(byPart[p.index], rng);
-    let count = 0;
-    for (const c of list) {
-      if (count >= p.target) break;
-      if (farEnough(c.pos)) { chosen.push(c); count++; }
-    }
+  // Decorative parts fall away together with the first part they are attached to (anything they
+  // touch other than the base), so nothing is left floating.
+  for (const d of decor) {
+    const box = new THREE.Box3().setFromObject(d.group).expandByScalar(0.05);
+    d.hosts = parts.filter((q) => q !== d && q.index !== 0 && !decor.has(q) && box.intersectsBox(new THREE.Box3().setFromObject(q.group)));
   }
-
-  // 3. Clamp total to the level budget and to a multiple of three, never stripping a part's last screw.
-  const countOf = (p) => chosen.filter((c) => c.part === p).length;
-  const removeOne = () => {
-    const pool = chosen.filter((c) => countOf(c.part) > 1);
-    if (!pool.length) return false;
-    const victim = pool[Math.floor(rng() * pool.length)];
-    chosen.splice(chosen.indexOf(victim), 1);
-    return true;
-  };
-  while (chosen.length > cfg.maxScrews && removeOne());
-  while (chosen.length % 3 !== 0) {
-    if (!removeOne()) {
-      // Every part is down to one screw: add spare ones instead.
-      const spare = parts.flatMap((p) => byPart[p.index]).find((c) => !chosen.includes(c) && farEnough(c.pos));
-      if (!spare) break;
-      chosen.push(spare);
-    }
-  }
-
-  // Parts that ended up without screws are purely decorative: the game never lets them
-  // block a screw (otherwise the level could dead-lock) and drops them on completion.
-  for (const p of parts) p.decor = countOf(p) === 0;
 
   // 4. Colours: every colour appears in multiples of three.
   const triples = chosen.length / 3;

@@ -421,6 +421,8 @@ function dropPart(p) {
   const rnd = () => (Math.random() - 0.5) * 6;
   p.mat.transparent = true;
   G.falling.push({ p, vel: dir, spin: new THREE.Vector3(rnd(), rnd(), rnd()), t: 0 });
+  // Screwless decorative bits (a visor, a neck...) go with the part they're attached to.
+  for (const d of G.parts) if (d.decor && d.attached && d.hosts?.includes(p)) dropPart(d);
 }
 
 function updateFalling(dt) {
