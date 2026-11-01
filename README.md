@@ -17,6 +17,14 @@ npm run build      # static build in dist/ (relative paths, host anywhere)
 On a phone, open the dev URL and use **Add to Home Screen**. The page ships a web app
 manifest, so it launches full-screen in portrait.
 
+## Live build
+
+Every push to the default branch is built and published to GitHub Pages by
+`.github/workflows/deploy-pages.yml`:
+<https://alden136.github.io/unscrew-3d/>
+
+One-time setup: **Settings → Pages → Build and deployment → Source: GitHub Actions**.
+
 ## Controls
 
 | Action | Input |
