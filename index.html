@@ -15,6 +15,9 @@
 <body>
   <div id="app">
     <header id="hud">
+      <button id="btn-levels" class="round" aria-label="Level list">
+        <svg viewBox="0 0 24 24"><path d="M4 4h6v6H4zm10 0h6v6h-6zM4 14h6v6H4zm10 0h6v6h-6z"/></svg>
+      </button>
       <button id="btn-restart" class="round" aria-label="Restart level">
         <svg viewBox="0 0 24 24"><path d="M12 5V2L7 6l5 4V7a5 5 0 1 1-5 5H5a7 7 0 1 0 7-7z"/></svg>
       </button>
@@ -46,6 +49,14 @@
     </footer>
 
     <div id="fx"></div>
+
+    <div id="levels" class="hidden">
+      <div class="panel levels-panel">
+        <h2>Levels</h2>
+        <div id="level-grid"></div>
+        <button id="levels-close" class="btn btn-alt">Close</button>
+      </div>
+    </div>
 
     <div id="overlay" class="hidden">
       <div class="panel">

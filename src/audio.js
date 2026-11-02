@@ -37,6 +37,10 @@ export const sfx = {
     tone({ freq: 380, to: 1100, dur: 0.16, type: 'square', vol: 0.05 });
     tone({ freq: 900, to: 1500, dur: 0.08, type: 'triangle', vol: 0.08, delay: 0.12 });
   },
+  crack() {
+    tone({ freq: 2400, to: 1200, dur: 0.06, type: 'square', vol: 0.05 });
+    tone({ freq: 1800, to: 700, dur: 0.12, type: 'triangle', vol: 0.1, delay: 0.03 });
+  },
   land() { tone({ freq: 1500, to: 900, dur: 0.06, type: 'triangle', vol: 0.12 }); },
   blocked() { tone({ freq: 160, to: 90, dur: 0.15, type: 'sawtooth', vol: 0.08 }); },
   box() {

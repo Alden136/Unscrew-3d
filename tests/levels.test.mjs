@@ -4,9 +4,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import { buildLevel, RAY_FAR, insidePrim, headPoints } from '../src/level.js';
+import { buildLevel, RAY_FAR, insidePrim, headPoints, LEVELS, LEVEL_COUNT } from '../src/level.js';
 
-const LEVELS = Array.from({ length: Number(process.env.LEVELS || 12) }, (_, i) => i + 1);
+const LEVEL_NUMBERS = Array.from({ length: Number(process.env.LEVELS || LEVEL_COUNT) }, (_, i) => i + 1);
 const MIN_TAP_FRACTION = 0.05; // a newly freed screw must be tappable from >= 5% of camera angles
 
 const rc = new THREE.Raycaster();
@@ -39,7 +39,7 @@ function cameraPositions(L) {
 // Mirrors handleTap() in src/main.js, aiming at the screw head.
 function tapWorksFrom(L, s, cam) {
   const live = L.screws.filter((x) => !x.removed).map((x) => x.hit);
-  const solid = L.parts.filter((p) => p.attached).flatMap((p) => p.meshes);
+  const solid = L.parts.filter((p) => p.attached && !p.glass).flatMap((p) => p.meshes);
   const head = s.pos.clone().addScaledVector(s.normal, 0.12);
   rc.set(cam, head.clone().sub(cam).normalize());
   rc.near = 0;
@@ -56,10 +56,23 @@ function drop(L, p) {
   for (const d of L.parts) if (d.decor && d.attached && d.hosts?.includes(p)) drop(L, d);
 }
 
-for (const level of LEVELS) {
+test('every level is a different model', () => {
+  const models = LEVELS.map((l) => l.model);
+  assert.equal(new Set(models).size, models.length, `repeated models: ${models}`);
+});
+
+for (const level of LEVEL_NUMBERS) {
   test(`level ${level} can be fully taken apart with real taps`, () => {
     const L = buildLevel(level);
     L.root.updateMatrixWorld(true);
+    const cfg = LEVELS[level - 1];
+    const count = (k) => L.screws.filter((s) => s[k]).length;
+    if (process.env.VERBOSE) {
+      console.log(`L${level} ${L.name}: ${L.screws.length} screws, ${new Set(L.screws.map((s) => s.color)).size} colours, ` +
+        `ice ${count('ice')}, mystery ${count('mystery')}, decor [${L.parts.filter((p) => p.decor).map((p) => p.name)}]`);
+    }
+    assert.equal(count('ice'), Math.min(cfg.ice || 0, L.screws.length), 'ice screw count');
+    assert.equal(count('mystery'), cfg.mystery || 0, 'mystery screw count');
     const all = L.parts.flatMap((p) => p.meshes);
     assert.equal(L.screws.length % 3, 0, 'screw count must be a multiple of 3');
 

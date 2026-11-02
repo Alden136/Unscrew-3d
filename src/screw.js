@@ -25,6 +25,20 @@ hitGeo.translate(0, 0.08, 0);
 const SCALE = 1.3;
 for (const g of [headGeo, capGeo, slotGeo, shaftGeo, threadGeo, hitGeo]) g.scale(SCALE, SCALE, SCALE);
 
+// Ice shell for frozen screws (first tap cracks it).
+const iceGeo = new THREE.CylinderGeometry(0.3, 0.33, 0.3, 7, 1);
+iceGeo.translate(0, 0.12, 0);
+const iceMat = new THREE.MeshStandardMaterial({
+  color: 0xd8f4ff, emissive: 0x3a7a99, emissiveIntensity: 0.25, roughness: 0.08, metalness: 0.1,
+  transparent: true, opacity: 0.62, depthWrite: false, flatShading: true,
+});
+
+// Mystery screws hide their colour behind brushed steel until they are uncovered.
+const mysteryMats = {
+  head: new THREE.MeshStandardMaterial({ color: 0xa7adb6, roughness: 0.35, metalness: 0.6 }),
+  slot: new THREE.MeshStandardMaterial({ color: 0x3d4148, roughness: 0.6 }),
+};
+
 const shaftMat = new THREE.MeshStandardMaterial({ color: 0xc9ced6, metalness: 0.85, roughness: 0.3 });
 const hitMat = new THREE.MeshBasicMaterial({ visible: false });
 
@@ -40,15 +54,19 @@ function materialsFor(hex) {
   return matCache.get(hex);
 }
 
-/** Build a screw mesh group. Returns { group, hit }. */
-export function createScrew(hex) {
+/**
+ * Build a screw mesh group.
+ * Returns { group, hit, iceMesh, reveal } where reveal() swaps a mystery screw to its real colour.
+ */
+export function createScrew(hex, { ice = false, mystery = false } = {}) {
   const m = materialsFor(hex);
+  const look = mystery ? mysteryMats : m;
   const group = new THREE.Group();
 
-  const head = new THREE.Mesh(headGeo, m.head);
-  const cap = new THREE.Mesh(capGeo, m.head);
-  const s1 = new THREE.Mesh(slotGeo, m.slot);
-  const s2 = new THREE.Mesh(slotGeo, m.slot);
+  const head = new THREE.Mesh(headGeo, look.head);
+  const cap = new THREE.Mesh(capGeo, look.head);
+  const s1 = new THREE.Mesh(slotGeo, look.slot);
+  const s2 = new THREE.Mesh(slotGeo, look.slot);
   s2.rotation.y = Math.PI / 2;
   const shaft = new THREE.Mesh(shaftGeo, shaftMat);
   head.castShadow = cap.castShadow = true;
@@ -60,7 +78,19 @@ export function createScrew(hex) {
     group.add(t);
   }
 
+  let iceMesh = null;
+  if (ice) {
+    iceMesh = new THREE.Mesh(iceGeo, iceMat.clone());
+    iceMesh.rotation.y = Math.random() * Math.PI;
+    group.add(iceMesh);
+  }
+
   const hit = new THREE.Mesh(hitGeo, hitMat);
   group.add(hit);
-  return { group, hit };
+
+  const reveal = () => {
+    head.material = cap.material = m.head;
+    s1.material = s2.material = m.slot;
+  };
+  return { group, hit, iceMesh, reveal };
 }

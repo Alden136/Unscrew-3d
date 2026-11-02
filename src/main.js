@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
-import { buildLevel, RAY_FAR } from './level.js';
+import { buildLevel, RAY_FAR, LEVELS, LEVEL_COUNT } from './level.js';
 import { sfx, isSoundEnabled, setSoundEnabled, vibrate } from './audio.js';
 import './style.css';
 
@@ -18,6 +18,7 @@ const ui = {
   level: $('#level-label'), progress: $('#progress-fill'), toast: $('#toast'),
   overlay: $('#overlay'), ovTitle: $('#ov-title'), ovText: $('#ov-text'), ovPrimary: $('#ov-primary'), ovSecondary: $('#ov-secondary'),
   slotBtn: $('#bst-slot'), hintBtn: $('#bst-hint'), sound: $('#btn-sound'), restart: $('#btn-restart'),
+  levelsBtn: $('#btn-levels'), levels: $('#levels'), levelGrid: $('#level-grid'), levelsClose: $('#levels-close'),
 };
 
 // ---------------------------------------------------------------------------
@@ -87,12 +88,21 @@ const tmpV = new THREE.Vector3();
 const Y = new THREE.Vector3(0, 1, 0);
 const qTmp = new THREE.Quaternion();
 
-function savedLevel() {
-  try { return Math.max(1, parseInt(localStorage.getItem('unscrew3d.level'), 10) || 1); } catch { return 1; }
+function readInt(key, fallback) {
+  try { return parseInt(localStorage.getItem(key), 10) || fallback; } catch { return fallback; }
 }
+function writeInt(key, n) {
+  try { localStorage.setItem(key, String(n)); } catch { /* ignore */ }
+}
+const clampLevel = (n) => Math.min(Math.max(1, n), LEVEL_COUNT);
+const savedLevel = () => clampLevel(readInt('unscrew3d.level', 1));
+/** Highest level the player may pick from the level list. */
+const unlockedLevel = () => clampLevel(Math.max(readInt('unscrew3d.unlocked', 1), savedLevel()));
 function saveLevel(n) {
-  try { localStorage.setItem('unscrew3d.level', String(n)); } catch { /* ignore */ }
+  writeInt('unscrew3d.level', n);
+  if (n > unlockedLevel()) writeInt('unscrew3d.unlocked', n);
 }
+const seenIntro = (n) => readInt(`unscrew3d.intro.${n}`, 0) === 1;
 
 function disposeLevel(g) {
   scene.remove(g.root);
@@ -103,8 +113,10 @@ function disposeLevel(g) {
 }
 
 function startLevel(n) {
+  n = clampLevel(n);
   if (G) disposeLevel(G);
   hideOverlay();
+  hideLevels();
   ui.fx.innerHTML = '';
 
   const L = buildLevel(n);
@@ -148,13 +160,22 @@ function startLevel(n) {
   updateBoosters();
   updateBufferWarn();
   saveLevel(n);
-  toast(n === 1 ? 'Drag to rotate · Tap a screw to unscrew it' : G.name, n === 1 ? 4500 : 1800);
+  if (G.intro && !seenIntro(n)) {
+    toast(G.intro, 4500);
+    writeInt(`unscrew3d.intro.${n}`, 1);
+  } else {
+    toast(G.name, 1800);
+  }
 }
 
 function fitCamera() {
   const vf = THREE.MathUtils.degToRad(camera.fov);
   const hf = 2 * Math.atan(Math.tan(vf / 2) * camera.aspect);
-  const d = (G.radius / Math.sin(Math.min(vf, hf) / 2)) * 0.66;
+  const d = Math.max(
+    (G.radius / Math.sin(Math.min(vf, hf) / 2)) * 0.66, // tall models
+    // Wide models: keep the widest span on screen, with a margin for the near side looking bigger.
+    G.horizRadius / Math.tan(hf / 2) + G.horizRadius * 0.6,
+  );
   controls.target.copy(G.center);
   camera.position.setFromSpherical(new THREE.Spherical(d, 1.18, 0.5)).add(G.center);
   controls.minDistance = d * 0.55;
@@ -364,6 +385,10 @@ async function tryRemove(s) {
     vibrate(25);
     return;
   }
+  if (s.ice) {
+    crackIce(s);
+    return;
+  }
   const dest = reserveDestination(s.color, s.hex);
   if (!dest) {
     wiggle(s);
@@ -377,6 +402,7 @@ async function tryRemove(s) {
   }
 
   s.removed = true;
+  if (s.mystery) { s.mystery = false; s.reveal(); } // the colour shows as it comes out
   s.part.screws.delete(s);
   G.removed++;
   G.pending++;
@@ -404,6 +430,18 @@ function wiggle(s) {
     if (s.removed) return;
     s.mesh.position.copy(s.pos).addScaledVector(tan, Math.sin(k * Math.PI * 6) * 0.06 * (1 - k));
   });
+}
+
+function crackIce(s) {
+  s.ice = false;
+  sfx.crack();
+  vibrate(15);
+  const ice = s.iceMesh;
+  s.iceMesh = null;
+  animate(0.28, (k) => {
+    ice.scale.setScalar(1 + 0.6 * k);
+    ice.material.opacity = 0.62 * (1 - k);
+  }).then(() => ice.removeFromParent());
 }
 
 function flashPart(p) {
@@ -435,7 +473,7 @@ function updateFalling(dt) {
     f.p.group.rotation.x += f.spin.x * dt;
     f.p.group.rotation.y += f.spin.y * dt;
     f.p.group.rotation.z += f.spin.z * dt;
-    if (f.t > 0.7) f.p.mat.opacity = Math.max(0, 1 - (f.t - 0.7) / 0.6);
+    if (f.t > 0.7) f.p.mat.opacity = f.p.baseOpacity * Math.max(0, 1 - (f.t - 0.7) / 0.6);
     if (f.t > 1.3) {
       f.p.group.removeFromParent();
       G.falling.splice(i, 1);
@@ -487,6 +525,17 @@ async function win() {
   controls.autoRotate = true;
   await wait(1100);
   if (G !== g) return;
+  writeInt('unscrew3d.cleared', Math.max(readInt('unscrew3d.cleared', 0), G.level));
+  if (G.level >= LEVEL_COUNT) {
+    showOverlay({
+      title: 'You did it!',
+      text: `All ${LEVEL_COUNT} models taken apart. Replay any level from the level list.`,
+      primary: { label: 'Levels', fn: () => { hideOverlay(); showLevels(); } },
+      secondary: { label: 'Replay', fn: () => startLevel(G.level) },
+    });
+    return;
+  }
+  writeInt('unscrew3d.unlocked', Math.max(unlockedLevel(), G.level + 1));
   showOverlay({
     title: 'Level Complete!',
     text: `You took apart the ${G.name.toLowerCase()}!`,
@@ -544,6 +593,25 @@ function showOverlay({ title, text, primary, secondary }) {
 }
 function hideOverlay() { ui.overlay.classList.add('hidden'); }
 
+function showLevels() {
+  const unlocked = unlockedLevel();
+  ui.levelGrid.innerHTML = '';
+  LEVELS.forEach((def, i) => {
+    const n = i + 1;
+    const b = document.createElement('button');
+    b.className = 'lvl-btn';
+    if (n > unlocked) b.classList.add('locked');
+    else if (n <= readInt('unscrew3d.cleared', 0)) b.classList.add('cleared');
+    if (G && n === G.level) b.classList.add('current');
+    b.innerHTML = `<span class="lvl-num">${n}</span><span class="lvl-name">${def.name}</span>`;
+    b.disabled = n > unlocked;
+    b.addEventListener('click', () => startLevel(n));
+    ui.levelGrid.append(b);
+  });
+  ui.levels.classList.remove('hidden');
+}
+function hideLevels() { ui.levels.classList.add('hidden'); }
+
 // ---------------------------------------------------------------------------
 // Boosters
 // ---------------------------------------------------------------------------
@@ -559,7 +627,8 @@ function useHint() {
   if (!G || G.over || G.won || G.hints <= 0) return;
   const open = new Set(G.boxes.filter((b) => b && !b.leaving && b.reserved < 3).map((b) => b.color));
   const free = G.screws.filter((s) => !s.removed && !blockerOf(s));
-  const s = free.find((x) => open.has(x.color)) || free[0];
+  // Never point at a mystery screw as a "match": that would give its hidden colour away.
+  const s = free.find((x) => !x.mystery && open.has(x.color)) || free.find((x) => !x.mystery) || free[0];
   if (!s) return;
   G.hints--;
   updateBoosters();
@@ -600,7 +669,8 @@ function handleTap(x, y) {
   const hit = rc.intersectObjects(live, false)[0];
   if (!hit) return;
   // Ignore screws hidden behind solid geometry from this viewpoint.
-  const solid = G.parts.filter((p) => p.attached).flatMap((p) => p.meshes);
+  // Glass is see-through: it can cover a screw (blockerOf) but doesn't stop you aiming past it.
+  const solid = G.parts.filter((p) => p.attached && !p.glass).flatMap((p) => p.meshes);
   const wall = rc.intersectObjects(solid, false)[0];
   if (wall && wall.distance < hit.distance - 0.25) return;
   tryRemove(hit.object.userData.screw);
@@ -630,6 +700,8 @@ window.addEventListener('pointercancel', endPointer);
 ui.slotBtn.addEventListener('click', () => { sfx.unlock(); useSlotBooster(); });
 ui.hintBtn.addEventListener('click', () => { sfx.unlock(); useHint(); });
 ui.restart.addEventListener('click', () => { sfx.unlock(); startLevel(G.level); });
+ui.levelsBtn.addEventListener('click', () => { sfx.unlock(); showLevels(); });
+ui.levelsClose.addEventListener('click', hideLevels);
 ui.sound.classList.toggle('muted', !isSoundEnabled());
 ui.sound.addEventListener('click', () => {
   setSoundEnabled(!isSoundEnabled());

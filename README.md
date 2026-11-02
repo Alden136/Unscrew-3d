@@ -6,6 +6,19 @@ Spin a model through 360°, tap screws to unscrew them, and sort them into the m
 colour boxes. Screws with no matching box wait in the tray. If the tray fills up, you lose.
 Once a part has no screws left, it tumbles away. Take the whole model apart to win.
 
+There are 20 levels, each a different hand-built model: birdhouse, cottage, robot,
+lighthouse, windmill, roadster, rocket, snowman, tree house, sailboat, steam train,
+hot-air balloon, castle gate, pagoda, tractor, propeller plane, mushroom house,
+ferris wheel, satellite and clock tower. New mechanics arrive gradually:
+
+- **Glass parts** (from level 2): you can see through them, but they still block the
+  screws behind them.
+- **Frozen screws** (from level 6): the first tap cracks the ice, the second unscrews.
+- **Mystery screws** (from level 10): grey until you unscrew them, so you don't know
+  whether a screw fits a box or goes to the tray.
+
+The level list (grid button, top left) replays any level you've unlocked.
+
 ## Play
 
 ```bash
@@ -37,18 +50,27 @@ One-time setup: **Settings → Pages → Build and deployment → Source: GitHub
 
 ## How it works
 
-- `src/level.js`: model templates (windmill, robot, rocket, cottage), built from simple
-  primitives. Screw spots are sampled on part surfaces. A spot is legal only if no part
-  listed earlier (further inside) covers it, so the "covers" graph has no cycles and every
-  level can be fully taken apart. Screw colours always come in multiples of 3. Difficulty
-  (screw count, number of colours) goes up with the level number, and models repeat in a
-  cycle.
+- `src/models.js`: the 20 models, built from simple primitives (boxes, cylinders, domes,
+  cones, spheres, tori), and each level's settings: colours, screw cap, frozen and mystery
+  screws, and an optional one-time tip.
+- `src/level.js`: turns a model into a level. Screw spots are sampled on part surfaces. A
+  spot is legal only if the head sits in open air and no part listed earlier (further
+  inside) covers it, so the "covers" graph has no cycles and every level can be fully taken
+  apart. Parts that end up with no screws never cover a screw, and they fall with the part
+  they're attached to. Screw colours always come in multiples of 3.
 - `src/main.js`: game loop, input (tap vs. drag), raycast blocking checks, box/tray logic,
   part-falling animation, boosters, win/lose flow.
 - `src/screw.js`: shared screw mesh (head, cross slot, threaded shaft, oversized
   invisible hit target for fingers).
 - `src/audio.js`: synthesized WebAudio sound effects and haptics. There are no asset files.
 
-Progress (current level) and the sound setting are saved in `localStorage`.
+Progress (current and unlocked levels) and the sound setting are saved in `localStorage`.
+
+## Tests
+
+`npm test` plays every level the way a player would: it orbits the camera only within the
+game's limits and taps only screws the game accepts. It fails if a level can't be fully
+taken apart, if a screw is buried inside another part, or if an uncovered screw is
+tappable from fewer than 5% of camera angles. The Pages workflow runs it before deploying.
 
 `window.__unscrew` exposes the game state for automated testing.
