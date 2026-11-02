@@ -405,7 +405,7 @@ const MODELS = {
 
 // --- levels --------------------------------------------------------------------
 // colors: how many screw colours; maxScrews: cap on screws; ice: screws frozen in ice (two taps);
-// mystery: screws whose colour stays hidden until they are unscrewed; intro: one-time tip shown on the level.
+// intro: one-time tip shown on the level.
 export const LEVELS = [
   { model: 'birdhouse', name: 'Birdhouse', colors: 3, maxScrews: 15, intro: 'Drag to rotate · Tap a screw to unscrew it' },
   { model: 'cottage', name: 'Cottage', colors: 3, maxScrews: 21, intro: 'A part falls off when its last screw is out' },
@@ -416,17 +416,17 @@ export const LEVELS = [
   { model: 'rocket', name: 'Rocket', colors: 5, maxScrews: 33, ice: 3 },
   { model: 'snowman', name: 'Snowman', colors: 4, maxScrews: 24, ice: 4 },
   { model: 'treehouse', name: 'Tree House', colors: 5, maxScrews: 36, ice: 3 },
-  { model: 'sailboat', name: 'Sailboat', colors: 5, maxScrews: 30, mystery: 3, intro: 'Grey screws keep their colour secret until unscrewed' },
-  { model: 'train', name: 'Steam Train', colors: 6, maxScrews: 36, ice: 3, mystery: 3 },
-  { model: 'balloon', name: 'Hot-Air Balloon', colors: 5, maxScrews: 27, mystery: 4 },
-  { model: 'castle', name: 'Castle Gate', colors: 6, maxScrews: 36, ice: 4, mystery: 3 },
-  { model: 'pagoda', name: 'Pagoda', colors: 6, maxScrews: 39, ice: 3, mystery: 5 },
-  { model: 'tractor', name: 'Tractor', colors: 6, maxScrews: 39, ice: 5, mystery: 3 },
-  { model: 'airplane', name: 'Propeller Plane', colors: 6, maxScrews: 36, ice: 4, mystery: 4 },
-  { model: 'mushroom', name: 'Mushroom House', colors: 5, maxScrews: 33, mystery: 6 },
-  { model: 'ferris', name: 'Ferris Wheel', colors: 7, maxScrews: 45, ice: 4, mystery: 5 },
-  { model: 'satellite', name: 'Satellite', colors: 7, maxScrews: 42, ice: 5, mystery: 5 },
-  { model: 'clocktower', name: 'Clock Tower', colors: 7, maxScrews: 48, ice: 6, mystery: 6 },
+  { model: 'sailboat', name: 'Sailboat', colors: 5, maxScrews: 30 },
+  { model: 'train', name: 'Steam Train', colors: 6, maxScrews: 36, ice: 3 },
+  { model: 'balloon', name: 'Hot-Air Balloon', colors: 5, maxScrews: 27 },
+  { model: 'castle', name: 'Castle Gate', colors: 6, maxScrews: 36, ice: 4 },
+  { model: 'pagoda', name: 'Pagoda', colors: 6, maxScrews: 39, ice: 3 },
+  { model: 'tractor', name: 'Tractor', colors: 6, maxScrews: 39, ice: 5 },
+  { model: 'airplane', name: 'Propeller Plane', colors: 6, maxScrews: 36, ice: 4 },
+  { model: 'mushroom', name: 'Mushroom House', colors: 5, maxScrews: 33 },
+  { model: 'ferris', name: 'Ferris Wheel', colors: 7, maxScrews: 45, ice: 4 },
+  { model: 'satellite', name: 'Satellite', colors: 7, maxScrews: 42, ice: 5 },
+  { model: 'clocktower', name: 'Clock Tower', colors: 7, maxScrews: 48, ice: 6 },
 ];
 
 export function modelParts(name) {

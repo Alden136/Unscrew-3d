@@ -33,12 +33,6 @@ const iceMat = new THREE.MeshStandardMaterial({
   transparent: true, opacity: 0.62, depthWrite: false, flatShading: true,
 });
 
-// Mystery screws hide their colour behind brushed steel until they are uncovered.
-const mysteryMats = {
-  head: new THREE.MeshStandardMaterial({ color: 0xa7adb6, roughness: 0.35, metalness: 0.6 }),
-  slot: new THREE.MeshStandardMaterial({ color: 0x3d4148, roughness: 0.6 }),
-};
-
 const shaftMat = new THREE.MeshStandardMaterial({ color: 0xc9ced6, metalness: 0.85, roughness: 0.3 });
 const hitMat = new THREE.MeshBasicMaterial({ visible: false });
 
@@ -56,17 +50,16 @@ function materialsFor(hex) {
 
 /**
  * Build a screw mesh group.
- * Returns { group, hit, iceMesh, reveal } where reveal() swaps a mystery screw to its real colour.
+ * Returns { group, hit, iceMesh }; iceMesh is the ice shell on a frozen screw, otherwise null.
  */
-export function createScrew(hex, { ice = false, mystery = false } = {}) {
+export function createScrew(hex, { ice = false } = {}) {
   const m = materialsFor(hex);
-  const look = mystery ? mysteryMats : m;
   const group = new THREE.Group();
 
-  const head = new THREE.Mesh(headGeo, look.head);
-  const cap = new THREE.Mesh(capGeo, look.head);
-  const s1 = new THREE.Mesh(slotGeo, look.slot);
-  const s2 = new THREE.Mesh(slotGeo, look.slot);
+  const head = new THREE.Mesh(headGeo, m.head);
+  const cap = new THREE.Mesh(capGeo, m.head);
+  const s1 = new THREE.Mesh(slotGeo, m.slot);
+  const s2 = new THREE.Mesh(slotGeo, m.slot);
   s2.rotation.y = Math.PI / 2;
   const shaft = new THREE.Mesh(shaftGeo, shaftMat);
   head.castShadow = cap.castShadow = true;
@@ -87,10 +80,5 @@ export function createScrew(hex, { ice = false, mystery = false } = {}) {
 
   const hit = new THREE.Mesh(hitGeo, hitMat);
   group.add(hit);
-
-  const reveal = () => {
-    head.material = cap.material = m.head;
-    s1.material = s2.material = m.slot;
-  };
-  return { group, hit, iceMesh, reveal };
+  return { group, hit, iceMesh };
 }

@@ -69,10 +69,9 @@ for (const level of LEVEL_NUMBERS) {
     const count = (k) => L.screws.filter((s) => s[k]).length;
     if (process.env.VERBOSE) {
       console.log(`L${level} ${L.name}: ${L.screws.length} screws, ${new Set(L.screws.map((s) => s.color)).size} colours, ` +
-        `ice ${count('ice')}, mystery ${count('mystery')}, decor [${L.parts.filter((p) => p.decor).map((p) => p.name)}]`);
+        `ice ${count('ice')}, decor [${L.parts.filter((p) => p.decor).map((p) => p.name)}]`);
     }
     assert.equal(count('ice'), Math.min(cfg.ice || 0, L.screws.length), 'ice screw count');
-    assert.equal(count('mystery'), cfg.mystery || 0, 'mystery screw count');
     const all = L.parts.flatMap((p) => p.meshes);
     assert.equal(L.screws.length % 3, 0, 'screw count must be a multiple of 3');
 

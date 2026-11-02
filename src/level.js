@@ -289,7 +289,6 @@ export function levelSettings(level) {
   const def = LEVELS[Math.min(Math.max(level, 1), LEVELS.length) - 1];
   return {
     ice: 0,
-    mystery: 0,
     ...def,
     colors: Math.min(PALETTE.length, def.colors),
     seed: level * 7919 + 13,
@@ -373,23 +372,21 @@ export function buildLevel(level) {
   }
   root.updateMatrixWorld(true);
 
-  // 6. Special screws: frozen (two taps) and mystery (colour hidden until unscrewed).
-  const ids = shuffle(chosen.map((_, i) => i), rng);
-  const mysteryIds = new Set(ids.slice(0, cfg.mystery));
-  const iceIds = new Set(ids.slice(cfg.mystery, cfg.mystery + cfg.ice));
+  // 6. Frozen screws (two taps).
+  const iceIds = new Set(shuffle(chosen.map((_, i) => i), rng).slice(0, cfg.ice));
 
   // 7. Build screw meshes.
   const screws = chosen.map((c, id) => {
     const col = colorList[id];
-    const ice = iceIds.has(id), mystery = mysteryIds.has(id);
-    const { group, hit, iceMesh, reveal } = createScrew(col.hex, { ice, mystery });
+    const ice = iceIds.has(id);
+    const { group, hit, iceMesh } = createScrew(col.hex, { ice });
     group.position.copy(c.pos);
     group.quaternion.setFromUnitVectors(UP, c.normal);
     root.add(group);
     const s = {
       id, part: c.part, color: col.name, hex: col.hex, pos: c.pos.clone(), normal: c.normal.clone(),
       mesh: group, hit, baseQuat: group.quaternion.clone(), removed: false,
-      ice, iceMesh, mystery, reveal,
+      ice, iceMesh,
     };
     hit.userData.screw = s;
     c.part.screws.add(s);

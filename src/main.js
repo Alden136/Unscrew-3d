@@ -429,7 +429,6 @@ async function tryRemove(s) {
   }
 
   s.removed = true;
-  if (s.mystery) { s.mystery = false; s.reveal(); } // the colour shows as it comes out
   s.part.screws.delete(s);
   G.removed++;
   G.pending++;
@@ -674,8 +673,7 @@ function useHint() {
   if (!G || G.over || G.won || G.hints <= 0) return;
   const open = new Set(G.boxes.filter((b) => b && !b.leaving && b.reserved < 3).map((b) => b.color));
   const free = G.screws.filter((s) => !s.removed && !blockerOf(s));
-  // Never point at a mystery screw as a "match": that would give its hidden colour away.
-  const s = free.find((x) => !x.mystery && open.has(x.color)) || free.find((x) => !x.mystery) || free[0];
+  const s = free.find((x) => open.has(x.color)) || free[0];
   if (!s) return;
   G.hints--;
   G.usedHint = true;

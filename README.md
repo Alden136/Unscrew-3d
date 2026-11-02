@@ -14,8 +14,6 @@ ferris wheel, satellite and clock tower. New mechanics arrive gradually:
 - **Glass parts** (from level 2): you can see through them, but they still block the
   screws behind them.
 - **Frozen screws** (from level 6): the first tap cracks the ice, the second unscrews.
-- **Mystery screws** (from level 10): grey until you unscrew them, so you don't know
-  whether a screw fits a box or goes to the tray.
 
 The level list (grid button, top left) replays any level you've unlocked. Each level awards
 up to three stars: you lose one for needing an extra tray slot and one for using hints.
@@ -52,8 +50,8 @@ One-time setup: **Settings → Pages → Build and deployment → Source: GitHub
 ## How it works
 
 - `src/models.js`: the 20 models, built from simple primitives (boxes, cylinders, domes,
-  cones, spheres, tori), and each level's settings: colours, screw cap, frozen and mystery
-  screws, and an optional one-time tip.
+  cones, spheres, tori), and each level's settings: colours, screw cap, frozen screws and an
+  optional one-time tip.
 - `src/level.js`: turns a model into a level. Screw spots are sampled on part surfaces. A
   spot is legal only if the head sits in open air and no part listed earlier (further
   inside) covers it, so the "covers" graph has no cycles and every level can be fully taken
