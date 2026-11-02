@@ -528,7 +528,7 @@ button { font-family: inherit; }
   background: linear-gradient(180deg, rgba(78, 170, 255, 0.55) 0%, rgba(185, 228, 255, 0.35) 60%, rgba(93, 187, 76, 0.35) 100%);
   -webkit-backdrop-filter: blur(5px);
   backdrop-filter: blur(5px);
-  grid-template-rows: 1fr auto auto auto 1.2fr;
+  grid-template-rows: 1fr auto auto 1.2fr;
   gap: 14px;
   justify-items: center;
 }
@@ -554,17 +554,9 @@ button { font-family: inherit; }
   paint-order: stroke fill;
   transform: rotate(-8deg);
 }
-.tagline {
-  grid-row: 3;
-  margin: 6px 0 4px;
-  padding: 4px 14px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.85);
-  color: var(--ink-soft);
-  font-weight: 600;
-}
 .btn-play {
-  grid-row: 4;
+  grid-row: 3;
+  margin-top: 26px;
   display: flex; align-items: center; gap: 8px;
   padding: 14px 44px;
   font-size: 28px;
@@ -573,7 +565,7 @@ button { font-family: inherit; }
 }
 .btn-play svg { width: 28px; height: 28px; fill: #fff; filter: drop-shadow(0 2px 0 var(--green-d)); }
 @keyframes breathe { 50% { transform: scale(1.06); } }
-#title-level { grid-row: 5; align-self: start; color: #fff; font-weight: 600; text-shadow: 0 2px 4px rgba(10, 20, 50, 0.5); }
+#title-level { grid-row: 4; align-self: start; color: #fff; font-weight: 600; text-shadow: 0 2px 4px rgba(10, 20, 50, 0.5); }
 
 /* ---------- Confetti ---------- */
 .confetti {
