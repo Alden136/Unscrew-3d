@@ -3,6 +3,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { buildLevel, RAY_FAR, LEVELS, LEVEL_COUNT } from './level.js';
 import { sfx, isSoundEnabled, setSoundEnabled, vibrate } from './audio.js';
+import '@fontsource-variable/fredoka';
 import './style.css';
 
 const BOX_COUNT = 4;
@@ -19,7 +20,11 @@ const ui = {
   overlay: $('#overlay'), ovTitle: $('#ov-title'), ovText: $('#ov-text'), ovPrimary: $('#ov-primary'), ovSecondary: $('#ov-secondary'),
   slotBtn: $('#bst-slot'), hintBtn: $('#bst-hint'), sound: $('#btn-sound'), restart: $('#btn-restart'),
   levelsBtn: $('#btn-levels'), levels: $('#levels'), levelGrid: $('#level-grid'), levelsClose: $('#levels-close'),
+  tray: $('#tray'), modelName: $('#model-name'), progressText: $('#progress-text'),
+  ovRibbon: $('#ov-ribbon'), ovStars: $('#ov-stars'),
+  titleScreen: $('#title-screen'), titlePlay: $('#title-play'), titleLevel: $('#title-level'),
 };
+const icon = (id, cls = '') => `<svg class="${cls}"><use href="#${id}" /></svg>`;
 
 // ---------------------------------------------------------------------------
 // Three.js scene
@@ -103,6 +108,15 @@ function saveLevel(n) {
   if (n > unlockedLevel()) writeInt('unscrew3d.unlocked', n);
 }
 const seenIntro = (n) => readInt(`unscrew3d.intro.${n}`, 0) === 1;
+function readStars() {
+  try { return JSON.parse(localStorage.getItem('unscrew3d.stars')) || {}; } catch { return {}; }
+}
+function saveStars(n, stars) {
+  const all = readStars();
+  if ((all[n] || 0) >= stars) return;
+  all[n] = stars;
+  try { localStorage.setItem('unscrew3d.stars', JSON.stringify(all)); } catch { /* ignore */ }
+}
 
 function disposeLevel(g) {
   scene.remove(g.root);
@@ -112,8 +126,11 @@ function disposeLevel(g) {
   }
 }
 
+let booting = true; // the first level loads behind the title screen
+
 function startLevel(n) {
   n = clampLevel(n);
+  if (!booting) hideTitle();
   if (G) disposeLevel(G);
   hideOverlay();
   hideLevels();
@@ -135,6 +152,8 @@ function startLevel(n) {
     won: false,
     falling: [],
     slotBoosters: SLOT_BOOSTERS,
+    usedSlot: false,
+    usedHint: false,
     hints: HINTS,
   };
   for (const s of G.screws) {
@@ -144,6 +163,8 @@ function startLevel(n) {
   for (const c in G.need) G.need[c] /= 3;
 
   ui.level.textContent = `Level ${n}`;
+  ui.modelName.textContent = G.name;
+  ui.titleLevel.textContent = `Level ${n} · ${G.name}`;
   ui.buffer.innerHTML = '';
   for (let i = 0; i < BASE_BUFFER; i++) addSlot(false);
   ui.boxes.innerHTML = '';
@@ -160,11 +181,14 @@ function startLevel(n) {
   updateBoosters();
   updateBufferWarn();
   saveLevel(n);
-  if (G.intro && !seenIntro(n)) {
-    toast(G.intro, 4500);
-    writeInt(`unscrew3d.intro.${n}`, 1);
-  } else {
-    toast(G.name, 1800);
+  // On first load the title screen is up; its Play button shows the tip instead.
+  if (!booting) {
+    if (G.intro && !seenIntro(n)) {
+      toast(G.intro, 4500);
+      writeInt(`unscrew3d.intro.${n}`, 1);
+    } else {
+      toast(G.name, 1800);
+    }
   }
 }
 
@@ -232,7 +256,9 @@ function spawnBox(i, animated = true) {
   const inner = div('inner');
   const holes = [div('hole'), div('hole'), div('hole')];
   inner.append(...holes);
-  el.append(inner);
+  const lid = div('lid');
+  lid.innerHTML = icon('i-check');
+  el.append(inner, lid);
   cell.append(el);
   const box = { i, color, el, holes, reserved: 0, filled: 0, leaving: animated };
   G.boxes[i] = box;
@@ -260,7 +286,7 @@ function completeBox(box) {
     G.transitions--;
     spawnBox(box.i, true);
     checkState();
-  }, 650);
+  }, 860);
 }
 
 function screwIcon(hex, extra = '') {
@@ -319,7 +345,7 @@ function pullFromBuffer() {
 
 function updateBufferWarn() {
   const free = G.buffer.filter((b) => b.state === 'empty').length;
-  ui.buffer.classList.toggle('full-soon', free <= 1);
+  ui.tray.classList.toggle('full-soon', free <= 1);
 }
 
 function centerOf(el) {
@@ -393,9 +419,10 @@ async function tryRemove(s) {
   if (!dest) {
     wiggle(s);
     if (G.pending > 0 || G.transitions > 0) return; // things are still settling; let them finish
-    ui.buffer.classList.remove('warn');
-    void ui.buffer.offsetWidth;
-    ui.buffer.classList.add('warn');
+    ui.tray.classList.remove('warn');
+    void ui.tray.offsetWidth;
+    ui.tray.classList.add('warn');
+    setTimeout(() => ui.tray.classList.remove('warn'), 700);
     sfx.blocked();
     checkState();
     return;
@@ -506,6 +533,7 @@ function fail() {
   vibrate(80);
   const canExtend = G.slotBoosters > 0 && G.buffer.length < MAX_BUFFER;
   showOverlay({
+    kind: 'lose',
     title: 'Out of Space!',
     text: canExtend ? 'The tray is full. Add an extra slot to keep going?' : 'The tray is full and no screw fits a box.',
     primary: canExtend
@@ -526,8 +554,13 @@ async function win() {
   await wait(1100);
   if (G !== g) return;
   writeInt('unscrew3d.cleared', Math.max(readInt('unscrew3d.cleared', 0), G.level));
+  // Three stars for a clean solve; lose one for needing an extra slot, one for using hints.
+  const stars = 3 - (G.usedSlot ? 1 : 0) - (G.usedHint ? 1 : 0);
+  saveStars(G.level, stars);
   if (G.level >= LEVEL_COUNT) {
     showOverlay({
+      kind: 'win',
+      stars,
       title: 'You did it!',
       text: `All ${LEVEL_COUNT} models taken apart. Replay any level from the level list.`,
       primary: { label: 'Levels', fn: () => { hideOverlay(); showLevels(); } },
@@ -537,6 +570,8 @@ async function win() {
   }
   writeInt('unscrew3d.unlocked', Math.max(unlockedLevel(), G.level + 1));
   showOverlay({
+    kind: 'win',
+    stars,
     title: 'Level Complete!',
     text: `You took apart the ${G.name.toLowerCase()}!`,
     primary: { label: 'Next Level', fn: () => startLevel(G.level + 1) },
@@ -562,6 +597,7 @@ function confetti() {
 // ---------------------------------------------------------------------------
 function updateProgress() {
   ui.progress.style.width = `${(100 * G.removed) / Math.max(1, G.screws.length)}%`;
+  ui.progressText.textContent = `${G.removed} / ${G.screws.length}`;
 }
 
 function updateBoosters() {
@@ -579,7 +615,10 @@ function toast(msg, ms = 2000) {
   toastTimer = setTimeout(() => ui.toast.classList.add('hidden'), ms);
 }
 
-function showOverlay({ title, text, primary, secondary }) {
+function showOverlay({ kind = 'info', stars = null, title, text, primary, secondary }) {
+  ui.ovRibbon.className = `ribbon ${kind}`;
+  ui.ovStars.classList.toggle('hidden', stars === null);
+  ui.ovStars.querySelectorAll('.star').forEach((st, i) => st.classList.toggle('on', stars !== null && i < stars));
   ui.ovTitle.textContent = title;
   ui.ovText.textContent = text;
   ui.ovPrimary.textContent = primary.label;
@@ -595,15 +634,22 @@ function hideOverlay() { ui.overlay.classList.add('hidden'); }
 
 function showLevels() {
   const unlocked = unlockedLevel();
+  const stars = readStars();
+  const cleared = readInt('unscrew3d.cleared', 0);
   ui.levelGrid.innerHTML = '';
   LEVELS.forEach((def, i) => {
     const n = i + 1;
     const b = document.createElement('button');
     b.className = 'lvl-btn';
-    if (n > unlocked) b.classList.add('locked');
-    else if (n <= readInt('unscrew3d.cleared', 0)) b.classList.add('cleared');
+    const locked = n > unlocked;
+    if (locked) b.classList.add('locked');
+    else if (stars[n] || n <= cleared) b.classList.add('cleared');
     if (G && n === G.level) b.classList.add('current');
-    b.innerHTML = `<span class="lvl-num">${n}</span><span class="lvl-name">${def.name}</span>`;
+    const got = stars[n] || 0;
+    const footer = locked
+      ? icon('i-lock', 'lvl-lock')
+      : `<span class="lvl-stars">${[0, 1, 2].map((k) => icon('i-star', k < got ? 'on' : '')).join('')}</span>`;
+    b.innerHTML = `<span class="lvl-num">${n}</span><span class="lvl-name">${def.name}</span>${footer}`;
     b.disabled = n > unlocked;
     b.addEventListener('click', () => startLevel(n));
     ui.levelGrid.append(b);
@@ -618,6 +664,7 @@ function hideLevels() { ui.levels.classList.add('hidden'); }
 function useSlotBooster() {
   if (G.slotBoosters <= 0 || G.buffer.length >= MAX_BUFFER) return;
   G.slotBoosters--;
+  G.usedSlot = true;
   addSlot(true);
   updateBoosters();
   updateBufferWarn();
@@ -631,6 +678,7 @@ function useHint() {
   const s = free.find((x) => !x.mystery && open.has(x.color)) || free.find((x) => !x.mystery) || free[0];
   if (!s) return;
   G.hints--;
+  G.usedHint = true;
   updateBoosters();
   focusOn(s);
   animate(1.4, (k) => {
@@ -733,6 +781,23 @@ window.__unscrew = {
   tryRemove: (s) => tryRemove(s),
   blockerOf: (s) => blockerOf(s),
   project: (v) => screenPos(v),
+  fail: () => fail(),
 };
 
+function hideTitle() {
+  ui.titleScreen.classList.add('hidden');
+  document.body.classList.remove('at-title');
+}
+document.body.classList.add('at-title');
+
+ui.titlePlay.addEventListener('click', () => {
+  sfx.unlock();
+  hideTitle();
+  if (G.intro && !seenIntro(G.level)) {
+    toast(G.intro, 4500);
+    writeInt(`unscrew3d.intro.${G.level}`, 1);
+  }
+});
+
 startLevel(savedLevel());
+booting = false;

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-  <meta name="theme-color" content="#6cc4ff" />
+  <meta name="theme-color" content="#5cb8ff" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -13,26 +13,78 @@
   <title>Unscrew 3D</title>
 </head>
 <body>
+  <!-- Scenery behind the 3D canvas -->
+  <div id="sky" aria-hidden="true">
+    <div class="sun"></div>
+    <svg class="cloud c1" viewBox="0 0 200 90"><use href="#cloud-shape" /></svg>
+    <svg class="cloud c2" viewBox="0 0 200 90"><use href="#cloud-shape" /></svg>
+    <svg class="cloud c3" viewBox="0 0 200 90"><use href="#cloud-shape" /></svg>
+    <svg class="cloud c4" viewBox="0 0 200 90"><use href="#cloud-shape" /></svg>
+    <svg class="hills" viewBox="0 0 400 140" preserveAspectRatio="none">
+      <path class="hill-far" d="M0 70 C 60 30, 120 40, 170 62 S 300 30, 400 58 V140 H0 Z" />
+      <path class="hill-mid" d="M0 92 C 70 60, 150 72, 210 88 S 330 64, 400 84 V140 H0 Z" />
+      <path class="hill-near" d="M0 116 C 90 96, 180 104, 260 114 S 360 104, 400 110 V140 H0 Z" />
+    </svg>
+  </div>
+
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <g id="cloud-shape">
+        <circle cx="62" cy="58" r="28" /><circle cx="98" cy="40" r="36" /><circle cx="140" cy="56" r="26" />
+        <rect x="36" y="54" width="132" height="30" rx="15" />
+      </g>
+      <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7" height="7" rx="2" /><rect x="13.5" y="3.5" width="7" height="7" rx="2" /><rect x="3.5" y="13.5" width="7" height="7" rx="2" /><rect x="13.5" y="13.5" width="7" height="7" rx="2" /></symbol>
+      <symbol id="i-restart" viewBox="0 0 24 24"><path d="M12 4.5V1.8L7.2 5.6 12 9.4V6.7a5.3 5.3 0 1 1-5.3 5.3H4.4A7.6 7.6 0 1 0 12 4.5z" /></symbol>
+      <symbol id="i-sound" viewBox="0 0 24 24"><path d="M3 9.2v5.6h3.8l4.9 4.4V4.8L6.8 9.2H3zm12.6-1.9-1.4 1.4a4.6 4.6 0 0 1 0 6.6l1.4 1.4a6.6 6.6 0 0 0 0-9.4zm2.8-2.8-1.4 1.4a8.6 8.6 0 0 1 0 12.2l1.4 1.4a10.6 10.6 0 0 0 0-15z" /></symbol>
+      <symbol id="i-mute" viewBox="0 0 24 24"><path d="M3 9.2v5.6h3.8l4.9 4.4V4.8L6.8 9.2H3zm18.4.6-1.4-1.4-2.4 2.4-2.4-2.4-1.4 1.4 2.4 2.4-2.4 2.4 1.4 1.4 2.4-2.4 2.4 2.4 1.4-1.4-2.4-2.4z" /></symbol>
+      <symbol id="i-plus" viewBox="0 0 24 24"><path d="M10 4h4v6h6v4h-6v6h-4v-6H4v-4h6z" /></symbol>
+      <symbol id="i-bulb" viewBox="0 0 24 24"><path d="M12 2.5a6.8 6.8 0 0 0-4 12.3c.6.5 1 1.2 1 2V18h6v-1.2c0-.8.4-1.5 1-2A6.8 6.8 0 0 0 12 2.5zM9.2 19.6h5.6v.9a1.6 1.6 0 0 1-1.6 1.6h-2.4a1.6 1.6 0 0 1-1.6-1.6z" /></symbol>
+      <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 1.8l3.1 6.4 7 .9-5.1 4.9 1.3 7-6.3-3.4-6.3 3.4 1.3-7L1.9 9.1l7-.9z" /></symbol>
+      <symbol id="i-lock" viewBox="0 0 24 24"><path d="M7 10V7.5a5 5 0 0 1 10 0V10h1.2c.8 0 1.3.6 1.3 1.3v8.4c0 .8-.6 1.3-1.3 1.3H5.8c-.8 0-1.3-.6-1.3-1.3v-8.4c0-.8.6-1.3 1.3-1.3zm2.6 0h4.8V7.5a2.4 2.4 0 0 0-4.8 0z" /></symbol>
+      <symbol id="i-check" viewBox="0 0 24 24"><path d="M9.2 16.2 4.9 11.9 2.8 14l6.4 6.4L21.2 8.4l-2.1-2.1z" /></symbol>
+      <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4.5v15c0 .8.9 1.3 1.6.9l11.8-7.5c.6-.4.6-1.3 0-1.7L8.6 3.6C7.9 3.2 7 3.7 7 4.5z" /></symbol>
+      <symbol id="i-screw" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="10.5" />
+        <circle cx="12" cy="12" r="10.5" fill="url(#screw-shine)" />
+        <path fill="#000" opacity=".42" d="M10.7 5.8h2.6v4.9h4.9v2.6h-4.9v4.9h-2.6v-4.9H5.8v-2.6h4.9z" />
+      </symbol>
+      <radialGradient id="screw-shine" cx="0.36" cy="0.3" r="0.75">
+        <stop offset="0" stop-color="#fff" stop-opacity=".75" />
+        <stop offset="0.3" stop-color="#fff" stop-opacity="0" />
+        <stop offset="1" stop-color="#000" stop-opacity=".3" />
+      </radialGradient>
+    </defs>
+  </svg>
+
   <div id="app">
     <header id="hud">
-      <button id="btn-levels" class="round" aria-label="Level list">
-        <svg viewBox="0 0 24 24"><path d="M4 4h6v6H4zm10 0h6v6h-6zM4 14h6v6H4zm10 0h6v6h-6z"/></svg>
-      </button>
-      <button id="btn-restart" class="round" aria-label="Restart level">
-        <svg viewBox="0 0 24 24"><path d="M12 5V2L7 6l5 4V7a5 5 0 1 1-5 5H5a7 7 0 1 0 7-7z"/></svg>
-      </button>
-      <div id="title-block">
-        <div id="level-label">Level 1</div>
-        <div id="progress"><div id="progress-fill"></div></div>
+      <div class="hud-side">
+        <button id="btn-levels" class="icon-btn" aria-label="Level list"><svg><use href="#i-grid" /></svg></button>
       </div>
-      <button id="btn-sound" class="round" aria-label="Toggle sound">
-        <svg class="on" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0 0 14 8v8a4.5 4.5 0 0 0 2.5-4zM14 3.2v2.1a7 7 0 0 1 0 13.4v2.1a9 9 0 0 0 0-17.6z"/></svg>
-        <svg class="off" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm18.7 1.4-1.4-1.4L18 11.3 15.7 9l-1.4 1.4 2.3 2.3-2.3 2.3 1.4 1.4 2.3-2.3 2.3 2.3 1.4-1.4-2.3-2.3z"/></svg>
-      </button>
+      <div id="title-block">
+        <div id="level-label" class="outlined">Level 1</div>
+        <div id="model-name">Birdhouse</div>
+      </div>
+      <div class="hud-side right">
+        <button id="btn-restart" class="icon-btn" aria-label="Restart level"><svg><use href="#i-restart" /></svg></button>
+        <button id="btn-sound" class="icon-btn" aria-label="Toggle sound">
+          <svg class="on"><use href="#i-sound" /></svg><svg class="off"><use href="#i-mute" /></svg>
+        </button>
+      </div>
     </header>
 
+    <div id="progress" aria-label="Screws removed">
+      <svg class="progress-icon"><use href="#i-screw" /></svg>
+      <div class="progress-track"><div id="progress-fill"></div></div>
+      <span id="progress-text">0 / 0</span>
+    </div>
+
     <section id="boxes" aria-label="Colour boxes"></section>
-    <section id="buffer" aria-label="Holding tray"></section>
+
+    <section id="tray" aria-label="Holding tray">
+      <div class="tray-label">Tray</div>
+      <div id="buffer"></div>
+    </section>
 
     <main id="stage">
       <canvas id="c"></canvas>
@@ -40,33 +92,53 @@
     </main>
 
     <footer id="boosters">
-      <button id="bst-slot" class="booster">
-        <span class="b-icon">+</span><span class="b-label">Slot</span><span class="count">1</span>
+      <button id="bst-slot" class="booster slot">
+        <span class="b-orb"><svg><use href="#i-plus" /></svg></span>
+        <span class="b-label">Slot</span>
+        <span class="count">1</span>
       </button>
-      <button id="bst-hint" class="booster">
-        <span class="b-icon">?</span><span class="b-label">Hint</span><span class="count">3</span>
+      <button id="bst-hint" class="booster hint">
+        <span class="b-orb"><svg><use href="#i-bulb" /></svg></span>
+        <span class="b-label">Hint</span>
+        <span class="count">3</span>
       </button>
     </footer>
 
     <div id="fx"></div>
 
-    <div id="levels" class="hidden">
-      <div class="panel levels-panel">
-        <h2>Levels</h2>
+    <div id="levels" class="screen hidden">
+      <div class="card levels-card">
+        <div class="ribbon"><span>Levels</span></div>
         <div id="level-grid"></div>
-        <button id="levels-close" class="btn btn-alt">Close</button>
+        <button id="levels-close" class="btn btn-light">Close</button>
       </div>
     </div>
 
-    <div id="overlay" class="hidden">
-      <div class="panel">
-        <h2 id="ov-title">Level Complete!</h2>
+    <div id="overlay" class="screen hidden">
+      <div class="card">
+        <div class="ribbon" id="ov-ribbon"><span id="ov-title">Level Complete!</span></div>
+        <div id="ov-stars" class="stars-row">
+          <svg class="star s1"><use href="#i-star" /></svg>
+          <svg class="star s2"><use href="#i-star" /></svg>
+          <svg class="star s3"><use href="#i-star" /></svg>
+        </div>
         <p id="ov-text"></p>
         <div class="ov-buttons">
-          <button id="ov-secondary" class="btn btn-alt">Retry</button>
+          <button id="ov-secondary" class="btn btn-light">Retry</button>
           <button id="ov-primary" class="btn">Next</button>
         </div>
       </div>
+    </div>
+
+    <div id="title-screen" class="screen">
+      <div class="logo">
+        <svg class="logo-screw"><use href="#i-screw" /></svg>
+        <div class="logo-word outlined">Unscrew</div>
+        <div class="logo-badge">3D</div>
+      </div>
+      <p class="tagline">Take it apart, one screw at a time</p>
+      <button id="title-play" class="btn btn-play"><svg><use href="#i-play" /></svg><span>Play</span></button>
+      <div id="title-level"></div>
     </div>
   </div>
   <script type="module" src="/src/main.js"></script>

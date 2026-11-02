@@ -17,7 +17,8 @@ ferris wheel, satellite and clock tower. New mechanics arrive gradually:
 - **Mystery screws** (from level 10): grey until you unscrew them, so you don't know
   whether a screw fits a box or goes to the tray.
 
-The level list (grid button, top left) replays any level you've unlocked.
+The level list (grid button, top left) replays any level you've unlocked. Each level awards
+up to three stars: you lose one for needing an extra tray slot and one for using hints.
 
 ## Play
 
@@ -63,6 +64,9 @@ One-time setup: **Settings → Pages → Build and deployment → Source: GitHub
 - `src/screw.js`: shared screw mesh (head, cross slot, threaded shaft, oversized
   invisible hit target for fingers).
 - `src/audio.js`: synthesized WebAudio sound effects and haptics. There are no asset files.
+- `index.html` and `src/style.css`: the UI (title screen, HUD, boxes, tray, boosters, dialogs and
+  level list), drawn with HTML/CSS and inline SVG icons over the transparent 3D canvas. The font
+  is Fredoka, bundled from `@fontsource-variable/fredoka` so the game works offline.
 
 Progress (current and unlocked levels) and the sound setting are saved in `localStorage`.
 
