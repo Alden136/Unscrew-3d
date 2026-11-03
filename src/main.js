@@ -21,7 +21,7 @@ const ui = {
   slotBtn: $('#bst-slot'), hintBtn: $('#bst-hint'), sound: $('#btn-sound'), restart: $('#btn-restart'),
   levelsBtn: $('#btn-levels'), levels: $('#levels'), levelGrid: $('#level-grid'), levelsClose: $('#levels-close'),
   tray: $('#tray'), modelName: $('#model-name'), progressText: $('#progress-text'),
-  ovRibbon: $('#ov-ribbon'), ovStars: $('#ov-stars'),
+  ovHead: $('#ov-head'), ovStars: $('#ov-stars'),
   titleScreen: $('#title-screen'), titlePlay: $('#title-play'), titleLevel: $('#title-level'),
 };
 const icon = (id, cls = '') => `<svg class="${cls}"><use href="#${id}" /></svg>`;
@@ -615,7 +615,7 @@ function toast(msg, ms = 2000) {
 }
 
 function showOverlay({ kind = 'info', stars = null, title, text, primary, secondary }) {
-  ui.ovRibbon.className = `ribbon ${kind}`;
+  ui.ovHead.className = `card-head ${kind}`;
   ui.ovStars.classList.toggle('hidden', stars === null);
   ui.ovStars.querySelectorAll('.star').forEach((st, i) => st.classList.toggle('on', stars !== null && i < stars));
   ui.ovTitle.textContent = title;
