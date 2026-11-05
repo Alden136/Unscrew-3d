@@ -236,6 +236,7 @@ button { font-family: inherit; }
 /* Lid that snaps shut when the box is full. */
 .box .lid {
   position: absolute;
+  pointer-events: none; /* while hidden it sits above the box, over the top bar's buttons */
   inset: -2px;
   border-radius: 16px;
   background:
