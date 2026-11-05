@@ -16,7 +16,7 @@ ferris wheel, satellite and clock tower. New mechanics arrive gradually:
 - **Frozen screws** (from level 6): the first tap cracks the ice, the second unscrews.
 
 The level list (grid button, top left) replays any level you've unlocked. Each level awards
-up to three stars: you lose one for needing an extra tray slot and one for using hints.
+three stars, or two if you needed an extra tray slot.
 
 ## Play
 
@@ -45,7 +45,6 @@ One-time setup: **Settings → Pages → Build and deployment → Source: GitHub
 | Zoom | pinch / mouse wheel |
 | Unscrew | tap a screw |
 | **+ Slot** booster | adds one tray slot (once per level, also offered when you run out of space) |
-| **Hint** booster | turns the camera to a free screw that fits an open box |
 
 ## How it works
 

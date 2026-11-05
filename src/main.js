@@ -10,7 +10,6 @@ const BOX_COUNT = 4;
 const BASE_BUFFER = 5;
 const MAX_BUFFER = 7;
 const SLOT_BOOSTERS = 1;
-const HINTS = 3;
 
 const $ = (s) => document.querySelector(s);
 const div = (cls) => { const e = document.createElement('div'); e.className = cls; return e; };
@@ -18,7 +17,7 @@ const ui = {
   boxes: $('#boxes'), buffer: $('#buffer'), stage: $('#stage'), canvas: $('#c'), fx: $('#fx'),
   level: $('#level-label'), progress: $('#progress-fill'), toast: $('#toast'),
   overlay: $('#overlay'), ovTitle: $('#ov-title'), ovText: $('#ov-text'), ovPrimary: $('#ov-primary'), ovSecondary: $('#ov-secondary'),
-  slotBtn: $('#bst-slot'), hintBtn: $('#bst-hint'), sound: $('#btn-sound'), restart: $('#btn-restart'),
+  slotBtn: $('#bst-slot'), sound: $('#btn-sound'), restart: $('#btn-restart'),
   levelsBtn: $('#btn-levels'), levels: $('#levels'), levelGrid: $('#level-grid'), levelsClose: $('#levels-close'),
   tray: $('#tray'), modelName: $('#model-name'), progressText: $('#progress-text'),
   ovHead: $('#ov-head'), ovStars: $('#ov-stars'),
@@ -81,7 +80,6 @@ resize();
 const tweens = new Set();
 const animate = (dur, update) => new Promise((res) => tweens.add({ t: 0, dur, update, res }));
 const easeOut = (k) => 1 - (1 - k) ** 3;
-const easeInOut = (k) => (k < 0.5 ? 4 * k * k * k : 1 - (-2 * k + 2) ** 3 / 2);
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // ---------------------------------------------------------------------------
@@ -153,8 +151,6 @@ function startLevel(n) {
     falling: [],
     slotBoosters: SLOT_BOOSTERS,
     usedSlot: false,
-    usedHint: false,
-    hints: HINTS,
   };
   for (const s of G.screws) {
     G.need[s.color] = (G.need[s.color] || 0) + 1;
@@ -553,8 +549,8 @@ async function win() {
   await wait(1100);
   if (G !== g) return;
   writeInt('unscrew3d.cleared', Math.max(readInt('unscrew3d.cleared', 0), G.level));
-  // Three stars for a clean solve; lose one for needing an extra slot, one for using hints.
-  const stars = 3 - (G.usedSlot ? 1 : 0) - (G.usedHint ? 1 : 0);
+  // Three stars for a clean solve; two if you needed an extra tray slot.
+  const stars = G.usedSlot ? 2 : 3;
   saveStars(G.level, stars);
   if (G.level >= LEVEL_COUNT) {
     showOverlay({
@@ -601,9 +597,7 @@ function updateProgress() {
 
 function updateBoosters() {
   ui.slotBtn.querySelector('.count').textContent = G.slotBoosters;
-  ui.hintBtn.querySelector('.count').textContent = G.hints;
   ui.slotBtn.disabled = G.slotBoosters <= 0 || G.buffer.length >= MAX_BUFFER;
-  ui.hintBtn.disabled = G.hints <= 0;
 }
 
 let toastTimer = 0;
@@ -669,38 +663,6 @@ function useSlotBooster() {
   updateBufferWarn();
 }
 
-function useHint() {
-  if (!G || G.over || G.won || G.hints <= 0) return;
-  const open = new Set(G.boxes.filter((b) => b && !b.leaving && b.reserved < 3).map((b) => b.color));
-  const free = G.screws.filter((s) => !s.removed && !blockerOf(s));
-  const s = free.find((x) => open.has(x.color)) || free[0];
-  if (!s) return;
-  G.hints--;
-  G.usedHint = true;
-  updateBoosters();
-  focusOn(s);
-  animate(1.4, (k) => {
-    if (s.removed) return;
-    s.mesh.scale.setScalar(1 + 0.6 * Math.abs(Math.sin(k * Math.PI * 4)) * (1 - k * 0.3));
-  }).then(() => s.mesh.scale.setScalar(1));
-}
-
-function focusOn(s) {
-  controls.autoRotate = false;
-  const target = controls.target;
-  const dist = camera.position.distanceTo(target);
-  const startDir = camera.position.clone().sub(target).normalize();
-  const endDir = s.normal.clone().multiplyScalar(0.75).add(s.pos.clone().sub(target).normalize().multiplyScalar(0.25));
-  endDir.y = THREE.MathUtils.clamp(endDir.y, -0.15, 0.85);
-  endDir.normalize();
-  const q = new THREE.Quaternion().setFromUnitVectors(startDir, endDir);
-  const qi = new THREE.Quaternion();
-  animate(0.6, (k) => {
-    qi.identity().slerp(q, easeInOut(k));
-    camera.position.copy(startDir).applyQuaternion(qi).multiplyScalar(dist).add(target);
-  });
-}
-
 // ---------------------------------------------------------------------------
 // Input
 // ---------------------------------------------------------------------------
@@ -744,7 +706,6 @@ window.addEventListener('pointerup', endPointer);
 window.addEventListener('pointercancel', endPointer);
 
 ui.slotBtn.addEventListener('click', () => { sfx.unlock(); useSlotBooster(); });
-ui.hintBtn.addEventListener('click', () => { sfx.unlock(); useHint(); });
 ui.restart.addEventListener('click', () => { sfx.unlock(); startLevel(G.level); });
 ui.levelsBtn.addEventListener('click', () => { sfx.unlock(); showLevels(); });
 ui.levelsClose.addEventListener('click', hideLevels);

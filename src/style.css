@@ -363,7 +363,6 @@ button { font-family: inherit; }
   cursor: pointer;
   --b: var(--blue); --bd: var(--blue-d);
 }
-.booster.hint { --b: var(--gold); --bd: var(--gold-d); }
 .b-orb {
   width: 58px; height: 58px;
   border-radius: 50%;
