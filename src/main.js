@@ -20,7 +20,8 @@ const ui = {
   slotBtn: $('#bst-slot'), sound: $('#btn-sound'), restart: $('#btn-restart'),
   levelsBtn: $('#btn-levels'), levels: $('#levels'), levelGrid: $('#level-grid'), levelsClose: $('#levels-close'),
   tray: $('#tray'), modelName: $('#model-name'), progressText: $('#progress-text'),
-  ovHead: $('#ov-head'), ovStars: $('#ov-stars'),
+  ovHead: $('#ov-head'), ovStars: $('#ov-stars'), ovGoals: $('#ov-goals'),
+  timer: $('#timer'), timerText: $('#timer-text'), timerTarget: $('#timer-target'),
   titleScreen: $('#title-screen'), titlePlay: $('#title-play'), titleLevel: $('#title-level'),
 };
 const icon = (id, cls = '') => `<svg class="${cls}"><use href="#${id}" /></svg>`;
@@ -151,6 +152,10 @@ function startLevel(n) {
     falling: [],
     slotBoosters: SLOT_BOOSTERS,
     usedSlot: false,
+    trayTrips: 0, // screws the player sent to the tray
+    started: false, // the clock starts on the first tap
+    timeMs: 0,
+    shownSec: -1,
   };
   for (const s of G.screws) {
     G.need[s.color] = (G.need[s.color] || 0) + 1;
@@ -158,6 +163,9 @@ function startLevel(n) {
   }
   for (const c in G.need) G.need[c] /= 3;
 
+  G.par = targetSeconds(G);
+  ui.timerTarget.textContent = `/ ${fmtTime(G.par)}`;
+  updateTimer();
   ui.level.textContent = `Level ${n}`;
   ui.modelName.textContent = G.name;
   ui.titleLevel.textContent = `Level ${n} · ${G.name}`;
@@ -183,7 +191,7 @@ function startLevel(n) {
       toast(G.intro, 4500);
       writeInt(`unscrew3d.intro.${n}`, 1);
     } else {
-      toast(G.name, 1800);
+      toast(`${G.name} · target ${fmtTime(G.par)}`, 2200);
     }
   }
 }
@@ -314,6 +322,7 @@ function reserveDestination(color, hex) {
   }
   const slot = G.buffer.find((b) => b.state === 'empty');
   if (slot) {
+    G.trayTrips++;
     Object.assign(slot, { state: 'incoming', color, hex });
     return { el: slot.el, land: () => landInTray(slot) };
   }
@@ -407,6 +416,7 @@ async function tryRemove(s) {
     vibrate(25);
     return;
   }
+  G.started = true;
   if (s.ice) {
     crackIce(s);
     return;
@@ -549,13 +559,22 @@ async function win() {
   await wait(1100);
   if (G !== g) return;
   writeInt('unscrew3d.cleared', Math.max(readInt('unscrew3d.cleared', 0), G.level));
-  // Three stars for a clean solve; two if you needed an extra tray slot.
-  const stars = G.usedSlot ? 2 : 3;
+  // One star per goal: finish, stay tidy (2 tray screws at most, no extra slot), beat the target time.
+  const tidy = !G.usedSlot && G.trayTrips <= 2;
+  const fast = G.timeMs <= G.par * 1000;
+  const stars = 1 + (tidy ? 1 : 0) + (fast ? 1 : 0);
+  const trips = `${G.trayTrips} screw${G.trayTrips === 1 ? '' : 's'} sent to the tray (2 max)`;
+  const goals = [
+    { ok: true, label: 'Taken apart', detail: `The ${G.name.toLowerCase()} is in pieces` },
+    { ok: tidy, label: 'Tidy', detail: G.usedSlot ? 'Needed an extra tray slot' : trips },
+    { ok: fast, label: 'Fast', detail: `${fmtTime(G.timeMs / 1000)} (target ${fmtTime(G.par)})` },
+  ];
   saveStars(G.level, stars);
   if (G.level >= LEVEL_COUNT) {
     showOverlay({
       kind: 'win',
       stars,
+      goals,
       title: 'You did it!',
       text: `All ${LEVEL_COUNT} models taken apart. Replay any level from the level list.`,
       primary: { label: 'Levels', fn: () => { hideOverlay(); showLevels(); } },
@@ -567,8 +586,9 @@ async function win() {
   showOverlay({
     kind: 'win',
     stars,
+    goals,
     title: 'Level Complete!',
-    text: `You took apart the ${G.name.toLowerCase()}!`,
+    text: '',
     primary: { label: 'Next Level', fn: () => startLevel(G.level + 1) },
     secondary: { label: 'Replay', fn: () => startLevel(G.level) },
   });
@@ -595,6 +615,27 @@ function updateProgress() {
   ui.progressText.textContent = `${G.removed} / ${G.screws.length}`;
 }
 
+/** Target time in seconds: a level's own `par`, or roughly 2.2s per screw plus extra for ice. */
+function targetSeconds(L) {
+  const def = LEVELS[L.level - 1];
+  if (def.par) return def.par;
+  const ice = L.screws.filter((s) => s.ice).length;
+  return Math.ceil((8 + 2.2 * L.screws.length + ice) / 5) * 5;
+}
+
+function fmtTime(sec) {
+  const t = Math.floor(sec);
+  return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
+}
+
+function updateTimer() {
+  const sec = Math.floor(G.timeMs / 1000);
+  if (sec === G.shownSec) return;
+  G.shownSec = sec;
+  ui.timerText.textContent = fmtTime(sec);
+  ui.timer.classList.toggle('over', G.timeMs > G.par * 1000);
+}
+
 function updateBoosters() {
   ui.slotBtn.querySelector('.count').textContent = G.slotBoosters;
   ui.slotBtn.disabled = G.slotBoosters <= 0 || G.buffer.length >= MAX_BUFFER;
@@ -608,7 +649,11 @@ function toast(msg, ms = 2000) {
   toastTimer = setTimeout(() => ui.toast.classList.add('hidden'), ms);
 }
 
-function showOverlay({ kind = 'info', stars = null, title, text, primary, secondary }) {
+function showOverlay({ kind = 'info', stars = null, goals = null, title, text, primary, secondary }) {
+  ui.ovGoals.classList.toggle('hidden', !goals);
+  ui.ovGoals.innerHTML = (goals || []).map((g) => `<li class="${g.ok ? 'hit' : 'miss'}">
+      <span class="goal-mark">${icon(g.ok ? 'i-check' : 'i-cross')}</span>
+      <span class="goal-text"><b>${g.label}</b><small>${g.detail}</small></span></li>`).join('');
   ui.ovHead.className = `card-head ${kind}`;
   ui.ovStars.classList.toggle('hidden', stars === null);
   ui.ovStars.querySelectorAll('.star').forEach((st, i) => st.classList.toggle('on', stars !== null && i < stars));
@@ -721,7 +766,15 @@ ui.sound.addEventListener('click', () => {
 // ---------------------------------------------------------------------------
 const clock = new THREE.Clock();
 renderer.setAnimationLoop(() => {
-  const dt = Math.min(clock.getDelta(), 0.05);
+  const raw = clock.getDelta();
+  const dt = Math.min(raw, 0.05);
+  // The clock runs from the first tap until the last screw is out, and pauses while a dialog or
+  // the level list is open (or the app is in the background, when frames stop).
+  if (G && G.started && !G.won && !G.over && G.removed < G.screws.length &&
+      ui.levels.classList.contains('hidden') && ui.overlay.classList.contains('hidden')) {
+    G.timeMs += Math.min(raw, 0.25) * 1000;
+    updateTimer();
+  }
   for (const t of tweens) {
     t.t += dt;
     const k = Math.min(1, t.t / t.dur);

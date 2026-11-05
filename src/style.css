@@ -143,13 +143,19 @@ button { font-family: inherit; }
 #btn-sound.muted .on { display: none; }
 #btn-sound.muted .off { display: block; }
 
-/* ---------- Progress ---------- */
+/* ---------- Progress + timer ---------- */
+#meta {
+  display: flex;
+  gap: 8px;
+  width: min(92%, 380px);
+  margin: 8px auto 0;
+}
 #progress {
+  flex: 1;
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: 6px;
-  width: min(72%, 300px);
-  margin: 8px auto 0;
   padding: 3px 10px 3px 4px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.85);
@@ -173,6 +179,24 @@ button { font-family: inherit; }
   transition: width 0.35s cubic-bezier(.3, 1.3, .6, 1);
 }
 #progress-text { font-size: 13px; font-weight: 700; color: var(--ink-soft); min-width: 44px; text-align: right; }
+#timer {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px 3px 5px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.85);
+  box-shadow: 0 3px 0 rgba(28, 79, 158, 0.25);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.timer-icon { width: 20px; height: 20px; fill: var(--blue-d); }
+#timer-target { color: var(--ink-soft); font-weight: 600; }
+#timer.over { color: var(--red-d); }
+#timer.over .timer-icon { fill: var(--red-d); }
 
 /* ---------- Colour boxes ---------- */
 #boxes {
@@ -464,6 +488,33 @@ button { font-family: inherit; }
 @keyframes star-pop { from { transform: scale(0) rotate(-40deg); } to { transform: none; } }
 
 .card p { margin: 6px 0 20px; font-size: 17px; font-weight: 500; color: var(--ink-soft); }
+.card p:empty { display: none; }
+
+/* Win screen: one row per star goal. */
+.goals { list-style: none; margin: 4px 0 18px; padding: 0; display: grid; gap: 6px; text-align: left; }
+.goals.hidden { display: none; }
+.goals li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  border-radius: 12px;
+  background: #eef3fb;
+}
+.goal-mark {
+  flex: none;
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  display: grid; place-items: center;
+  background: var(--green);
+  box-shadow: inset 0 -3px 0 var(--green-d);
+}
+.goal-mark svg { width: 16px; height: 16px; fill: #fff; }
+.goals li.miss .goal-mark { background: #c3cde0; box-shadow: inset 0 -3px 0 #9fadc6; }
+.goal-text { display: flex; flex-direction: column; line-height: 1.2; }
+.goal-text b { font-size: 15px; font-weight: 700; color: var(--ink); }
+.goal-text small { font-size: 13px; font-weight: 500; color: var(--ink-soft); }
+.goals li.miss .goal-text b { color: var(--ink-soft); }
 .ov-buttons { display: flex; gap: 12px; justify-content: center; }
 
 .btn {
@@ -590,6 +641,6 @@ button { font-family: inherit; }
 }
 
 /* While the title screen is up, the game HUD stays out of the way. */
-#hud, #progress, #boxes, #tray, #boosters { transition: opacity 0.3s; }
-body.at-title #hud, body.at-title #progress, body.at-title #boxes,
+#hud, #meta, #boxes, #tray, #boosters { transition: opacity 0.3s; }
+body.at-title #hud, body.at-title #meta, body.at-title #boxes,
 body.at-title #tray, body.at-title #boosters { opacity: 0; }

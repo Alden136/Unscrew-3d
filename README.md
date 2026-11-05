@@ -15,8 +15,18 @@ ferris wheel, satellite and clock tower. New mechanics arrive gradually:
   screws behind them.
 - **Frozen screws** (from level 6): the first tap cracks the ice, the second unscrews.
 
-The level list (grid button, top left) replays any level you've unlocked. Each level awards
-three stars, or two if you needed an extra tray slot.
+The level list (grid button, top left) replays any level you've unlocked.
+
+Each level has three stars to earn, one per goal:
+
+1. **Taken apart**: finish the level.
+2. **Tidy**: send at most 2 screws to the tray, without using an extra slot.
+3. **Fast**: beat the target time shown next to the progress bar. The clock starts on your
+   first tap and pauses while a dialog or the level list is open. The target is about 2.2
+   seconds per screw plus a little for ice; a level can set its own with `par` in
+   `src/models.js`.
+
+The win screen shows which goals you hit, and the level list keeps your best result.
 
 ## Play
 
