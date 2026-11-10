@@ -20,6 +20,10 @@ const facing = (prim, dir) => ({ ...prim, f: dir });
 
 const part = (name, color, screws, ...prims) => ({ name, color, screws, prims });
 const glass = (p) => ({ ...p, glass: true });
+/** A screwless part that belongs to the base and stays put until the level is cleared. */
+const fixed = (p) => ({ ...p, fixed: true });
+/** A screwless part that falls together with the named part (otherwise: with whatever it touches). */
+const on = (host, p) => ({ ...p, on: host });
 
 /** Unit direction in the xz-plane at angle `a` from +z (towards +x). */
 const around = (a) => [Math.sin(a), 0, Math.cos(a)];
@@ -333,17 +337,30 @@ const MODELS = {
   },
 
   sailboat() {
+    const portholes = [-1.12, -0.51, 0.11, 0.72].flatMap((x) => [0.81, -0.81].map((z) => C(0.13, 0.13, 0.06, x, 1.05, z, PI / 2, 0, 0)));
     return [
       part('water', '#4fb6e8', 4, C(3.2, 3.3, 0.3, 0, 0.15, 0)),
+      fixed(part('foam', '#ffffff', 0,
+        D(0.3, 2.5, 0.3, 1.0), D(0.22, 2.75, 0.3, 0.4), D(0.28, -2.6, 0.3, -0.9), D(0.2, -1.2, 0.3, 2.4), D(0.24, 0.8, 0.3, -2.5))),
       part('hull', '#f4f1ea', 6, B(4.2, 1.0, 1.6, -0.2, 0.8, 0)),
       part('bow', '#f4f1ea', 2, B(1.13, 1.0, 1.13, 1.9, 0.8, 0, 0, PI / 4, 0)),
-      part('stripe', '#3c6fd8', 3, B(4.25, 0.2, 1.65, -0.2, 0.45, 0)),
+      on('hull', part('stripe', '#3c6fd8', 0, B(4.25, 0.2, 1.65, -0.2, 0.45, 0))),
+      part('portholes', '#2f5fae', 0, ...portholes),
+      part('rudder', '#8a5a33', 1, B(0.12, 0.75, 0.5, -2.36, 0.72, 0)),
       part('deck', '#d6a36a', 4, B(4.3, 0.15, 1.75, -0.2, 1.375, 0)),
+      part('railing', '#ffffff', 0,
+        ...[-0.78, 0, 0.78].map((z) => B(0.07, 0.32, 0.07, -2.28, 1.61, z)), B(0.07, 0.07, 1.63, -2.28, 1.79, 0)),
       part('cabin', '#f6c26b', 3, B(1.4, 0.8, 1.2, -1.3, 1.85, 0)),
-      part('mast', '#8a5a33', 0, C(0.12, 0.15, 4.2, 0.6, 3.55, 0)),
-      part('mainsail', '#ffffff', 4, B(1.8, 3.0, 0.08, -0.4, 3.3, 0)),
+      part('cabin-roof', '#3c6fd8', 1, B(1.6, 0.12, 1.4, -1.3, 2.31, 0)),
+      glass(part('cabin-window', '#7fd4ff', 1, B(0.7, 0.35, 0.06, -1.3, 1.95, -0.62))),
+      part('barrel', '#a8703f', 1, C(0.3, 0.3, 0.45, 1.25, 1.675, 0.5)),
+      on('deck', part('mast', '#8a5a33', 0, C(0.12, 0.15, 4.2, 0.6, 3.55, 0))),
+      on('mainsail', part('boom', '#8a5a33', 0, C(0.06, 0.06, 1.9, -0.35, 2.46, 0, 0, 0, PI / 2))),
+      part('mainsail', '#ffffff', 4, B(1.7, 2.6, 0.08, -0.35, 3.82, 0)),
       part('jib', '#ffe27a', 3, B(1.1, 2.2, 0.08, 1.45, 2.8, 0, 0, 0, -0.35)),
       part('flag', '#e04848', 1, B(0.6, 0.35, 0.06, 0.95, 5.45, 0)),
+      part('gull', '#f4f4f4', 0,
+        S(0.16, 0.6, 5.82, 0), S(0.1, 0.78, 5.95, 0), K(0.04, 0.14, 0.9, 5.95, 0, 0, 0, -PI / 2), B(0.12, 0.04, 0.7, 0.58, 5.86, 0)),
       part('lifebuoy', '#ff5a3a', 1, T(0.32, 0.11, -1.3, 1.85, 0.72)),
     ];
   },
@@ -351,35 +368,73 @@ const MODELS = {
   train() {
     const parts = [
       part('track', '#6b5a4a', 4, B(6.4, 0.25, 2.0, 0, 0.125, 0)),
+      fixed(part('sleepers', '#4a3a2c', 0, ...[-2.8, -2.0, -1.2, -0.4, 0.4, 1.2, 2.0, 2.8].map((x) => B(0.3, 0.05, 1.9, x, 0.275, 0)))),
+      fixed(part('rails', '#9aa3ad', 0, B(6.4, 0.07, 0.12, 0, 0.285, 0.9), B(6.4, 0.07, 0.12, 0, 0.285, -0.9))),
       part('chassis', '#2b2f36', 4, B(5.0, 0.4, 1.6, 0, 1.05, 0)),
+      part('buffers', '#9aa3ad', 0, C(0.16, 0.16, 0.22, -2.6, 1.05, 0.5, 0, 0, PI / 2), C(0.16, 0.16, 0.22, -2.6, 1.05, -0.5, 0, 0, PI / 2)),
       part('boiler', '#d23c3c', 6, C(0.85, 0.85, 3.0, 0.8, 2.1, 0, 0, 0, PI / 2)),
+      on('boiler', part('bands', '#ffc61a', 0, T(0.86, 0.05, -0.15, 2.1, 0, 0, PI / 2, 0), T(0.86, 0.05, 1.47, 2.1, 0, 0, PI / 2, 0))),
       part('cab', '#2f5fae', 5, B(1.6, 2.0, 1.6, -1.5, 2.25, 0)),
       part('cab-roof', '#2b2f36', 2, B(2.0, 0.2, 1.9, -1.5, 3.35, 0)),
+      glass(part('cab-window-l', '#9fe0ff', 1, B(0.8, 0.6, 0.06, -1.5, 2.75, 0.83))),
+      glass(part('cab-window-r', '#9fe0ff', 1, B(0.8, 0.6, 0.06, -1.5, 2.75, -0.83))),
       part('chimney', '#2b2f36', 2, C(0.35, 0.25, 0.9, 1.8, 3.3, 0)),
       part('dome', '#ffc61a', 1, D(0.4, 0.5, 2.88, 0)),
+      part('sand-dome', '#3b4656', 1, D(0.28, 1.1, 2.9, 0)),
+      part('whistle', '#ffc61a', 0, C(0.06, 0.06, 0.35, -0.3, 3.1, 0), S(0.09, -0.3, 3.3, 0)),
+      on('boiler', part('lamp-housing', '#2b2f36', 0, B(0.3, 0.32, 0.3, 2.22, 3.08, 0))),
+      on('boiler', part('lamp', '#fff2a8', 0, S(0.12, 2.38, 3.08, 0))),
       part('smokebox', '#3b4656', 2, C(0.9, 0.9, 0.15, 2.35, 2.1, 0, 0, 0, PI / 2)),
+      part('door-boss', '#ffc61a', 0, C(0.22, 0.22, 0.06, 2.45, 2.1, 0, 0, 0, PI / 2)),
       part('cowcatcher', '#c9ced6', 2, B(0.5, 0.55, 1.4, 2.65, 0.95, 0, 0, 0, 0.5)),
     ];
     for (const x of [-1.6, 0, 1.6]) {
       for (const z of [-0.9, 0.9]) parts.push(part('wheel', '#c9ced6', 1, C(0.55, 0.55, 0.3, x, 0.8, z, PI / 2, 0, 0)));
     }
+    // Coupling rods sit below the wheel centres so they don't cover the wheel screws.
+    parts.push(part('rods', '#8a2b2b', 0, B(3.4, 0.1, 0.06, 0, 0.45, 1.09), B(3.4, 0.1, 0.06, 0, 0.45, -1.09)));
+    parts.push(part('smoke', '#f4f4f4', 2, S(0.3, 1.85, 4.12, 0), S(0.4, 1.62, 4.62, 0.08), S(0.5, 1.25, 5.25, -0.05)));
     return parts;
   },
 
   balloon() {
+    const c = [0, 4.85, 0]; // centre of the envelope
+    const onEnvelope = (e, a) => {
+      const dir = [Math.cos(e) * Math.sin(a), Math.sin(e), Math.cos(e) * Math.cos(a)];
+      return facing(C(0.32, 0.32, 0.08, c[0] + dir[0] * 2.0, c[1] + dir[1] * 2.0, c[2] + dir[2] * 2.0), dir);
+    };
+    // Ropes lean in from the basket corners to the mouth of the envelope.
+    const ropes = [[1, 1], [1, -1], [-1, 1], [-1, -1]].map(([sx, sz]) =>
+      facing(C(0.035, 0.035, 1.05, sx * 0.61, 1.9, sz * 0.61), [-0.22 * sx, 1, -0.22 * sz]));
+    const pennants = [-0.6, -0.2, 0.2, 0.6].flatMap((x) => [0.72, -0.72].map((z) => K(0.09, 0.24, x, 1.13, z, PI, 0, 0)));
+    const tether = (sx) => [
+      B(0.12, 0.45, 0.12, sx * 1.55, 0.5, sx * 1.1),
+      facing(C(0.025, 0.025, 1.06, sx * 1.15, 1.0, sx * 0.925), [sx * 0.8, -0.6, sx * 0.35]),
+    ];
     return [
       part('pad', '#86d95a', 4, C(2.2, 2.3, 0.3, 0, 0.15, 0)),
       part('basket', '#b9824f', 4, B(1.4, 1.0, 1.4, 0, 0.8, 0)),
-      part('rim', '#8a5a33', 2, B(1.55, 0.15, 1.55, 0, 1.35, 0)),
+      part('basket-base', '#8a5a33', 0, B(1.5, 0.14, 1.5, 0, 0.37, 0)),
+      part('rim', '#8a5a33', 0, B(1.55, 0.15, 1.55, 0, 1.35, 0)),
+      on('basket', part('bunting', '#ffc61a', 0, ...pennants)),
+      on('basket', part('pilot', '#f2c9a0', 0, S(0.24, 0.3, 1.62, 0.15))),
+      on('basket', part('pilot-cap', '#3c6fd8', 0, D(0.25, 0.3, 1.72, 0.15))),
       part('sandbag-l', '#d9c08a', 1, B(0.5, 0.5, 0.5, -0.97, 0.85, 0)),
       part('sandbag-r', '#d9c08a', 1, B(0.5, 0.5, 0.5, 0.97, 0.85, 0)),
-      part('ropes', '#6b5a4a', 0,
-        B(0.08, 1.0, 0.08, -0.77, 1.9, -0.77), B(0.08, 1.0, 0.08, 0.77, 1.9, -0.77),
-        B(0.08, 1.0, 0.08, -0.77, 1.9, 0.77), B(0.08, 1.0, 0.08, 0.77, 1.9, 0.77)),
-      part('balloon', '#ec5a3a', 9, S(2.0, 0, 4.85, 0)),
-      part('skirt', '#ffc61a', 2, C(1.05, 0.75, 0.5, 0, 2.6, 0)),
+      on('basket', part('tethers', '#6b5a4a', 0, ...tether(1), ...tether(-1))),
+      on('basket', part('ropes', '#6b5a4a', 0, ...ropes)),
+      on('basket', part('burner', '#3b4656', 0, C(0.22, 0.28, 0.3, 0, 2.1, 0), B(1.2, 0.06, 0.06, 0, 2.0, 0), B(0.06, 0.06, 1.2, 0, 2.0, 0))),
+      on('basket', part('flame', '#ff8a1c', 0, K(0.16, 0.45, 0, 2.45, 0))),
+      part('balloon', '#ec5a3a', 9, S(2.0, ...c)),
+      part('skirt', '#ffc61a', 0, C(1.05, 0.75, 0.5, 0, 2.6, 0)),
       part('band', '#ffc61a', 4, T(2.0, 0.14, 0, 4.85, 0, PI / 2, 0, 0)),
+      part('band-high', '#ffffff', 2, T(1.75, 0.12, 0, 5.85, 0, PI / 2, 0, 0)),
+      part('band-low', '#ffffff', 2, T(1.75, 0.12, 0, 3.85, 0, PI / 2, 0, 0)),
+      part('patch', '#ffe27a', 1, onEnvelope(0.26, 0.6)),
+      part('patch', '#ffe27a', 1, onEnvelope(-0.26, 2.7)),
+      part('patch', '#ffe27a', 1, onEnvelope(0.26, 4.4)),
       part('crown', '#ffc61a', 2, D(0.8, 0, 6.6, 0)),
+      part('pennant', '#3c6fd8', 0, C(0.03, 0.03, 0.55, 0, 7.65, 0), B(0.45, 0.26, 0.04, 0.25, 7.76, 0)),
     ];
   },
 
@@ -544,9 +599,9 @@ export const LEVELS = [
   { model: 'rocket', name: 'Rocket', colors: 5, maxScrews: 33, ice: 3 },
   { model: 'snowman', name: 'Snowman', colors: 4, maxScrews: 24, ice: 4 },
   { model: 'treehouse', name: 'Tree House', colors: 5, maxScrews: 36, ice: 3 },
-  { model: 'sailboat', name: 'Sailboat', colors: 5, maxScrews: 30 },
-  { model: 'train', name: 'Steam Train', colors: 6, maxScrews: 36, ice: 3 },
-  { model: 'balloon', name: 'Hot-Air Balloon', colors: 5, maxScrews: 27 },
+  { model: 'sailboat', name: 'Sailboat', colors: 5, maxScrews: 27 },
+  { model: 'train', name: 'Steam Train', colors: 6, maxScrews: 30, ice: 3 },
+  { model: 'balloon', name: 'Hot-Air Balloon', colors: 5, maxScrews: 24 },
   { model: 'castle', name: 'Castle Gate', colors: 6, maxScrews: 36, ice: 4 },
   { model: 'pagoda', name: 'Pagoda', colors: 6, maxScrews: 39, ice: 3 },
   { model: 'tractor', name: 'Tractor', colors: 6, maxScrews: 39, ice: 5 },

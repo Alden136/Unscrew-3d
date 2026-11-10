@@ -323,7 +323,7 @@ export function buildLevel(level) {
       return m;
     });
     const p = {
-      index, name: spec.name, group, meshes, mat, glass: !!spec.glass, baseOpacity: mat.opacity,
+      index, name: spec.name, group, meshes, mat, glass: !!spec.glass, fixed: !!spec.fixed, on: spec.on || null, baseOpacity: mat.opacity,
       target: spec.screws, screws: new Set(), attached: true, center: new THREE.Vector3(),
     };
     meshes.forEach((m) => { m.userData.part = p; });
@@ -347,10 +347,13 @@ export function buildLevel(level) {
   for (const p of parts) p.decor = decor.has(p);
 
   // Decorative parts fall away together with the first part they are attached to (anything they
-  // touch other than the base), so nothing is left floating.
+  // touch other than the base), so nothing is left floating. Ones marked `fixed` belong to the
+  // base (rails on a track, say) and stay until the level is cleared.
   for (const d of decor) {
     const box = new THREE.Box3().setFromObject(d.group).expandByScalar(0.05);
-    d.hosts = parts.filter((q) => q !== d && q.index !== 0 && !decor.has(q) && box.intersectsBox(new THREE.Box3().setFromObject(q.group)));
+    if (d.fixed) d.hosts = [];
+    else if (d.on) d.hosts = parts.filter((q) => q.name === d.on && !decor.has(q)); // named explicitly by the model
+    else d.hosts = parts.filter((q) => q !== d && q.index !== 0 && !decor.has(q) && box.intersectsBox(new THREE.Box3().setFromObject(q.group)));
   }
 
   // 4. Colours: every colour appears in multiples of three.
