@@ -37,9 +37,19 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.05;
 
 const scene = new THREE.Scene();
-const pmrem = new THREE.PMREMGenerator(renderer);
-scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+function bakeEnvironment() {
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  const old = scene.environment;
+  scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+  old?.dispose();
+  pmrem.dispose();
+}
+bakeEnvironment();
 scene.environmentIntensity = 0.55;
+// Phones drop the WebGL context of a tab left in the background. Three.js rebuilds geometry and
+// materials by itself when it comes back, but the baked environment lighting has to be redone,
+// or the model returns looking dark.
+ui.canvas.addEventListener('webglcontextrestored', () => requestAnimationFrame(bakeEnvironment));
 
 scene.add(new THREE.HemisphereLight(0xffffff, 0x88b46a, 0.9));
 const sun = new THREE.DirectionalLight(0xfff4e0, 1.7);
@@ -123,6 +133,7 @@ function disposeLevel(g) {
     p.meshes.forEach((m) => m.geometry.dispose());
     p.mat.dispose();
   }
+  for (const s of g.screws) s.iceMesh?.material.dispose(); // each frozen screw has its own ice material
 }
 
 let booting = true; // the first level loads behind the title screen
@@ -264,17 +275,19 @@ function spawnBox(i, animated = true) {
   lid.innerHTML = icon('i-check');
   el.append(inner, lid);
   cell.append(el);
-  const box = { i, color, el, holes, reserved: 0, filled: 0, leaving: animated };
+  // `entering`: sliding in. It already accepts screws (they wait for `entered` before flying to it).
+  // `leaving`: full and on its way out.
+  const box = { i, color, el, holes, reserved: 0, filled: 0, entering: animated, leaving: false, entered: null };
   G.boxes[i] = box;
   if (animated) {
     G.transitions++;
-    setTimeout(() => {
+    box.entered = wait(400).then(() => {
       if (G !== g) return;
-      box.leaving = false;
+      box.entering = false;
       G.transitions--;
       pullFromBuffer();
       checkState();
-    }, 360);
+    });
   }
 }
 
@@ -318,7 +331,7 @@ function reserveDestination(color, hex) {
   const box = G.boxes.find((b) => b && !b.leaving && b.color === color && b.reserved < 3);
   if (box) {
     const idx = box.reserved++;
-    return { el: box.holes[idx], land: () => landInBox(box, idx, hex) };
+    return { el: box.holes[idx], ready: box.entered, land: () => landInBox(box, idx, hex) };
   }
   const slot = G.buffer.find((b) => b.state === 'empty');
   if (slot) {
@@ -332,7 +345,7 @@ function reserveDestination(color, hex) {
 /** Move any tray screws that now have a matching open box. */
 function pullFromBuffer() {
   for (const box of G.boxes) {
-    if (!box || box.leaving) continue;
+    if (!box || box.leaving || box.entering) continue;
     for (const slot of G.buffer) {
       if (box.reserved >= 3) break;
       if (slot.state !== 'filled' || slot.color !== box.color) continue;
@@ -451,6 +464,10 @@ async function tryRemove(s) {
   if (G !== g) return;
   // The base (part 0) anchors the model and only falls away once the level is cleared.
   if (s.part.screws.size === 0 && s.part.attached && s.part.index !== 0) dropPart(s.part);
+  if (dest.ready) {
+    await dest.ready; // the box is still sliding in: hover until it has settled
+    if (G !== g) return;
+  }
   const from = screenPos(s.mesh.position);
   s.mesh.removeFromParent();
   flyTo(s.hex, from, dest.el, dest.land);
@@ -473,7 +490,10 @@ function crackIce(s) {
   animate(0.28, (k) => {
     ice.scale.setScalar(1 + 0.6 * k);
     ice.material.opacity = 0.62 * (1 - k);
-  }).then(() => ice.removeFromParent());
+  }).then(() => {
+    ice.removeFromParent();
+    ice.material.dispose();
+  });
 }
 
 function flashPart(p) {
@@ -730,18 +750,27 @@ function handleTap(x, y) {
 }
 
 let tap = null;
-let activePointers = 0;
+const downPointers = new Set();
+// A browser can drop a touch's "up" event (a system gesture, an alert, switching apps). A new
+// primary pointer means no other finger is down, so forget any stale ones first; otherwise every
+// later tap would look like a second finger and be ignored. OrbitControls keeps its own list with
+// the same flaw, so it is cleared too. This runs before the controls see the event.
+window.addEventListener('pointerdown', (e) => {
+  if (!e.isPrimary) return;
+  downPointers.clear();
+  if (Array.isArray(controls._pointers)) controls._pointers.length = 0;
+}, true);
 ui.canvas.addEventListener('pointerdown', (e) => {
-  activePointers++;
+  downPointers.add(e.pointerId);
   sfx.unlock();
   controls.autoRotate = false;
-  tap = activePointers === 1 ? { id: e.pointerId, x: e.clientX, y: e.clientY, t: performance.now() } : null;
+  tap = downPointers.size === 1 ? { id: e.pointerId, x: e.clientX, y: e.clientY, t: performance.now() } : null;
 });
 ui.canvas.addEventListener('pointermove', (e) => {
   if (tap && e.pointerId === tap.id && Math.hypot(e.clientX - tap.x, e.clientY - tap.y) > 10) tap = null;
 });
 const endPointer = (e) => {
-  activePointers = Math.max(0, activePointers - 1);
+  downPointers.delete(e.pointerId);
   if (tap && e.pointerId === tap.id) {
     if (e.type === 'pointerup' && performance.now() - tap.t < 450) handleTap(e.clientX, e.clientY);
     tap = null;
@@ -765,13 +794,14 @@ ui.sound.addEventListener('click', () => {
 // Main loop
 // ---------------------------------------------------------------------------
 const clock = new THREE.Clock();
+const landscapePhone = window.matchMedia('(orientation: landscape) and (max-height: 520px)');
 renderer.setAnimationLoop(() => {
   const raw = clock.getDelta();
   const dt = Math.min(raw, 0.05);
   // The clock runs from the first tap until the last screw is out, and pauses while a dialog or
   // the level list is open (or the app is in the background, when frames stop).
   if (G && G.started && !G.won && !G.over && G.removed < G.screws.length &&
-      ui.levels.classList.contains('hidden') && ui.overlay.classList.contains('hidden')) {
+      ui.levels.classList.contains('hidden') && ui.overlay.classList.contains('hidden') && !landscapePhone.matches) {
     G.timeMs += Math.min(raw, 0.25) * 1000;
     updateTimer();
   }
