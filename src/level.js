@@ -235,7 +235,11 @@ function placeScrews(parts, allMeshes, decor, cfg, rng) {
         const hits = rc.intersectObjects(others, false);
         const ok = hits.every((h) => {
           const q = h.object.userData.part;
-          return q.index > p.index && !decor.has(q) && h.distance > 0.3;
+          if (h.distance <= 0.3) return false;
+          // A decorative part never falls on its own, so it must not sit right over a screw. One
+          // further off (a lantern high above, say) doesn't hide the screw and is ignored.
+          if (decor.has(q)) return h.distance > 1.0;
+          return q.index > p.index;
         });
         if (ok) byPart[p.index].push({ part: p, pos, normal: n });
       }

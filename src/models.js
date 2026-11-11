@@ -439,14 +439,24 @@ const MODELS = {
   },
 
   castle() {
+    const chain = (sx) => facing(C(0.03, 0.03, 1.72, sx * 0.58, 1.2, 1.055), [0, -1.4, 0.99]);
     const parts = [
       part('ground', '#7fd257', 6, B(6.4, 0.4, 3.2, 0, 0.2, 0)),
       part('wall', '#c7c2b8', 6, B(3.2, 2.4, 0.8, 0, 1.6, 0)),
+      on('wall', part('ivy', '#3fa94a', 0, S(0.25, -0.9, 1.0, -0.45), S(0.22, -0.7, 1.35, -0.45), S(0.2, -1.05, 1.45, -0.45))),
       part('tower-l', '#b5afa4', 5, C(0.9, 0.95, 3.6, -2.2, 2.2, 0)),
       part('tower-r', '#b5afa4', 5, C(0.9, 0.95, 3.6, 2.2, 2.2, 0)),
+      on('tower-l', part('slits', '#3b4656', 0, B(0.12, 0.5, 0.08, -2.2, 1.3, 0.93), B(0.12, 0.5, 0.08, -2.2, 2.5, 0.91))),
+      on('tower-r', part('slits', '#3b4656', 0, B(0.12, 0.5, 0.08, 2.2, 1.3, 0.93), B(0.12, 0.5, 0.08, 2.2, 2.5, 0.91))),
+      part('drawbridge', '#a8703f', 1, B(1.2, 0.1, 1.0, 0, 0.45, 1.1)),
       part('gate', '#8a5a33', 2, B(1.2, 1.6, 0.15, 0, 1.2, 0.47)),
+      on('gate', part('gate-bands', '#3b4656', 0, B(1.2, 0.08, 0.04, 0, 0.93, 0.56), B(1.2, 0.08, 0.04, 0, 1.48, 0.56))),
+      on('gate', part('chains', '#9aa3ad', 0, chain(1), chain(-1))),
+      part('crest', '#ffc61a', 1, facing(C(0.3, 0.3, 0.08, 0, 2.4, 0.44), [0, 0, 1])),
       part('banner-l', '#3c6fd8', 1, B(0.55, 1.0, 0.08, -1.05, 1.9, 0.44)),
       part('banner-r', '#3c6fd8', 1, B(0.55, 1.0, 0.08, 1.05, 1.9, 0.44)),
+      part('bush', '#3fa94a', 1, D(0.35, -2.8, 0.4, 1.2)),
+      part('bush', '#3fa94a', 1, D(0.35, 2.8, 0.4, 1.2)),
     ];
     for (const x of [-0.9, 0, 0.9]) parts.push(part('merlon', '#b5afa4', 1, B(0.5, 0.45, 0.8, x, 3.025, 0)));
     for (const x of [-2.2, 2.2]) {
@@ -457,62 +467,119 @@ const MODELS = {
   },
 
   pagoda() {
+    const corners = (h) => [[1, 1], [1, -1], [-1, 1], [-1, -1]].map(([sx, sz]) => [sx * h, sz * h]);
+    const eaves = (h, y) => corners(h).map(([x, z]) => S(0.12, x, y, z));
+    const rail = [
+      ...corners(1.7).map(([x, z]) => B(0.08, 0.3, 0.08, x, 1.95, z)),
+      B(3.4, 0.06, 0.06, 0, 2.07, 1.7), B(3.4, 0.06, 0.06, 0, 2.07, -1.7),
+      B(0.06, 0.06, 3.4, 1.7, 2.07, 0), B(0.06, 0.06, 3.4, -1.7, 2.07, 0),
+    ];
+    const windows = (h, y, w, ht) => [B(w, ht, 0.06, 0, y, h), B(w, ht, 0.06, 0, y, -h), B(0.06, ht, w, h, y, 0), B(0.06, ht, w, -h, y, 0)];
+    const stoneLantern = (x) => part('stone-lantern', '#9aa3ad', 1, B(0.2, 0.35, 0.2, x, 0.575, 1.95), B(0.4, 0.25, 0.4, x, 0.875, 1.95));
     return [
       part('base', '#b5afa4', 6, B(4.4, 0.4, 4.4, 0, 0.2, 0)),
+      part('step', '#9aa3ad', 1, B(1.6, 0.15, 0.5, 0, 0.475, 1.65)),
+      stoneLantern(-1.95),
+      stoneLantern(1.95),
+      part('blossom', '#ff9ec4', 1, S(0.28, -1.9, 0.62, -1.9), S(0.22, -1.55, 0.58, -2.0)),
       part('tier-1', '#d23c3c', 6, B(2.6, 1.2, 2.6, 0, 1.0, 0)),
       part('door-front', '#ffc61a', 1, B(0.8, 0.9, 0.1, 0, 0.85, 1.33)),
       part('door-back', '#ffc61a', 1, B(0.8, 0.9, 0.1, 0, 0.85, -1.33)),
       part('roof-1', '#2f3a4a', 6, B(3.8, 0.2, 3.8, 0, 1.7, 0)),
+      on('roof-1', part('pillars', '#8a2b2b', 0, ...corners(1.55).map(([x, z]) => C(0.09, 0.09, 1.2, x, 1.0, z)))),
+      on('roof-1', part('lanterns', '#ff5a3a', 0, ...corners(1.78).map(([x, z]) => S(0.13, x, 1.44, z)))),
+      on('roof-1', part('eaves', '#ffc61a', 0, ...eaves(1.9, 1.8))),
+      on('roof-1', part('balcony', '#d23c3c', 0, ...rail)),
       part('tier-2', '#d23c3c', 4, B(2.0, 1.0, 2.0, 0, 2.3, 0)),
+      on('tier-2', part('windows', '#ffe27a', 0, ...windows(1.0, 2.3, 0.5, 0.4))),
       part('roof-2', '#2f3a4a', 4, B(3.0, 0.2, 3.0, 0, 2.9, 0)),
+      on('roof-2', part('eaves', '#ffc61a', 0, ...eaves(1.5, 3.0))),
       part('tier-3', '#d23c3c', 3, B(1.4, 0.9, 1.4, 0, 3.45, 0)),
+      on('tier-3', part('windows', '#ffe27a', 0, ...windows(0.7, 3.45, 0.3, 0.3))),
       part('roof-3', '#2f3a4a', 3, B(2.2, 0.2, 2.2, 0, 4.0, 0)),
+      on('roof-3', part('eaves', '#ffc61a', 0, ...eaves(1.1, 4.1))),
       part('spire', '#ffc61a', 2, K(0.5, 1.4, 0, 4.8, 0)),
+      on('spire', part('finial', '#d23c3c', 0, T(0.25, 0.05, 0, 4.85, 0, PI / 2, 0, 0), T(0.15, 0.05, 0, 5.15, 0, PI / 2, 0, 0), S(0.12, 0, 5.55, 0))),
     ];
   },
 
   tractor() {
     const parts = [
       part('field', '#9b6b43', 4, B(6.0, 0.3, 3.6, 0, 0.15, 0)),
+      fixed(part('crops', '#5cc95a', 0, ...[-2.6, -1.95, -1.3, -0.65, 0, 0.65, 1.3, 1.95, 2.6].map((x) => K(0.1, 0.3, x, 0.45, 1.6)))),
+      part('hay-bale', '#e9c46a', 1, C(0.4, 0.4, 0.7, -2.45, 0.7, 0, PI / 2, 0, 0)),
+      part('hay-bale', '#e9c46a', 1, C(0.4, 0.4, 0.7, 2.5, 0.7, -1.2, PI / 2, 0, 0)),
       part('body', '#3fae4a', 5, B(3.0, 1.0, 1.4, 0.3, 1.6, 0)),
+      part('bumper', '#3b4656', 1, B(0.25, 0.35, 1.0, 1.95, 1.45, 0)),
       part('hood', '#3fae4a', 3, B(1.6, 0.7, 1.2, 1.2, 2.45, 0)),
+      on('hood', part('grille', '#3b4656', 0, B(0.06, 0.45, 0.7, 2.03, 2.4, 0))),
+      on('hood', part('headlights', '#fff2a8', 0, S(0.11, 2.02, 2.62, 0.48), S(0.11, 2.02, 2.62, -0.48))),
       part('cabin', '#f4f1ea', 4, B(1.4, 1.6, 1.5, -0.7, 2.9, 0)),
+      on('cabin', part('mirrors', '#3b4656', 0, B(0.06, 0.25, 0.2, 0.06, 3.2, 0.92), B(0.06, 0.25, 0.2, 0.06, 3.2, -0.92))),
       glass(part('windshield', '#9fe0ff', 1, B(0.08, 1.0, 1.1, 0.02, 3.0, 0))),
       glass(part('side-glass-l', '#9fe0ff', 1, B(1.0, 0.9, 0.08, -0.7, 3.0, 0.79))),
       glass(part('side-glass-r', '#9fe0ff', 1, B(1.0, 0.9, 0.08, -0.7, 3.0, -0.79))),
       part('roof', '#ffc61a', 2, B(1.7, 0.2, 1.8, -0.7, 3.8, 0)),
-      part('exhaust', '#3b4656', 0, C(0.15, 0.15, 1.0, 1.7, 3.3, 0.35)),
+      on('roof', part('beacon', '#ff8a1c', 0, D(0.14, -0.7, 3.9, 0))),
+      on('hood', part('exhaust', '#3b4656', 0, C(0.15, 0.15, 1.0, 1.7, 3.3, 0.35))),
     ];
     for (const z of [-1.0, 1.0]) parts.push(part('rear-wheel', '#2b2f36', 2, C(1.0, 1.0, 0.5, -0.9, 1.3, z, PI / 2, 0, 0)));
+    for (const z of [-1.0, 1.0]) parts.push(part('fender', '#3fae4a', 1, B(1.6, 0.12, 0.6, -0.9, 2.42, z)));
     for (const z of [-1.27, 1.27]) parts.push(part('rear-hub', '#ffc61a', 1, C(0.42, 0.42, 0.12, -0.9, 1.3, z, PI / 2, 0, 0)));
     for (const z of [-0.9, 0.9]) parts.push(part('front-wheel', '#2b2f36', 1, C(0.55, 0.55, 0.4, 1.5, 0.85, z, PI / 2, 0, 0)));
     return parts;
   },
 
   airplane() {
+    const windows = [-1.8, -1.2, -0.6, 0.0, 0.6].flatMap((x) => [1, -1].map((sz) =>
+      facing(C(0.13, 0.13, 0.05, x, 2.855, sz * 0.667), [0, 0.357, sz * 0.934])));
+    const gear = [1, -1].flatMap((sz) => [C(0.04, 0.04, 0.5, 0.3, 2.06, sz * 0.9), C(0.18, 0.18, 0.1, 0.3, 1.72, sz * 0.9, PI / 2, 0, 0)]);
     return [
       part('stand', '#8a96a8', 2, C(0.8, 1.0, 0.3, 0, 0.15, 0)),
+      fixed(part('stand-ring', '#ffc61a', 0, T(0.9, 0.05, 0, 0.3, 0, PI / 2, 0, 0))),
       part('pole', '#8a96a8', 2, C(0.3, 0.3, 1.6, 0, 1.1, 0)),
       part('fuselage', '#f4f1ea', 7, C(0.7, 0.7, 5.0, 0, 2.6, 0, 0, 0, PI / 2)),
+      on('fuselage', part('windows', '#2f5fae', 0, ...windows)),
       part('nose', '#e8473b', 2, D(0.7, 2.5, 2.6, 0, 0, 0, -PI / 2)),
       part('tail-cone', '#f4f1ea', 2, K(0.7, 1.4, -3.2, 2.6, 0, 0, 0, PI / 2)),
       part('wings', '#3c6fd8', 6, B(1.4, 0.18, 6.0, 0.3, 2.4, 0)),
+      on('wings', part('gear', '#3b4656', 0, ...gear)),
+      on('wings', part('nav-lights', '#ff4d5e', 0, S(0.08, 0.3, 2.4, 3.02), S(0.08, 0.3, 2.4, -3.02))),
+      part('roundel-l', '#ffffff', 1, C(0.3, 0.3, 0.04, 0.3, 2.51, 2.2)),
+      part('roundel-r', '#ffffff', 1, C(0.3, 0.3, 0.04, 0.3, 2.51, -2.2)),
       part('engine-l', '#c9ced6', 1, C(0.3, 0.3, 0.9, 0.5, 2.0, 1.6, 0, 0, PI / 2)),
       part('engine-r', '#c9ced6', 1, C(0.3, 0.3, 0.9, 0.5, 2.0, -1.6, 0, 0, PI / 2)),
+      on('engine-l', part('engine-prop', '#3b4656', 0, B(0.06, 0.7, 0.1, 0.98, 2.0, 1.6))),
+      on('engine-r', part('engine-prop', '#3b4656', 0, B(0.06, 0.7, 0.1, 0.98, 2.0, -1.6))),
       part('fin', '#e8473b', 2, B(0.9, 1.2, 0.12, -3.0, 3.35, 0)),
       part('stabilizer', '#3c6fd8', 2, B(0.7, 0.12, 2.2, -3.0, 2.7, 0)),
+      on('cockpit', part('pilot', '#f2c9a0', 0, S(0.2, 1.2, 3.4, 0))),
       glass(part('cockpit', '#9fe0ff', 1, D(0.5, 1.2, 3.2, 0))),
       part('propeller', '#3b4656', 2, B(0.1, 1.8, 0.26, 3.25, 2.6, 0), B(0.1, 1.8, 0.26, 3.25, 2.6, 0, PI / 2, 0, 0)),
+      on('propeller', part('spinner', '#e8473b', 0, K(0.2, 0.4, 3.5, 2.6, 0, 0, 0, -PI / 2))),
     ];
   },
 
   mushroom() {
+    const at = (r, a) => [Math.sin(a) * r, Math.cos(a) * r];
+    const toadstool = (a) => {
+      const [x, z] = at(2.55, a), [x2, z2] = at(2.6, a + 0.25);
+      return part('toadstool', '#e04848', 1,
+        C(0.07, 0.09, 0.25, x, 0.475, z), D(0.22, x, 0.6, z), C(0.05, 0.07, 0.18, x2, 0.44, z2), D(0.16, x2, 0.53, z2));
+    };
+    const flowers = [2.2, 3.0, 5.2].flatMap((a) => { const [x, z] = at(2.55, a); return [C(0.03, 0.03, 0.35, x, 0.52, z), S(0.12, x, 0.74, z)]; });
     const parts = [
       part('grass', '#7fd257', 5, C(2.8, 3.0, 0.35, 0, 0.175, 0)),
+      fixed(part('path', '#c9c2b4', 0, C(0.5, 0.55, 0.1, 0, 0.4, 1.75), C(0.2, 0.2, 0.04, 0.05, 0.37, 2.38))),
+      fixed(part('flowers', '#ff9ec4', 0, ...flowers)),
+      toadstool(0.9),
+      toadstool(4.0),
+      part('mailbox', '#3c6fd8', 1, C(0.05, 0.05, 0.6, -1.9, 0.65, 1.6), B(0.3, 0.25, 0.45, -1.9, 1.05, 1.6)),
       part('stem', '#fbf0da', 6, C(1.2, 1.4, 2.6, 0, 1.65, 0)),
       part('gills', '#f2d29b', 2, C(2.4, 2.4, 0.15, 0, 2.8, 0)),
       part('cap', '#e04848', 9, D(2.4, 0, 2.8, 0)),
       part('door', '#9a5530', 2, B(0.8, 1.3, 0.15, 0, 1.0, 1.33)),
+      on('door', part('door-knob', '#ffc61a', 0, S(0.06, 0.25, 1.0, 1.43))),
     ];
     for (const a of [-PI / 4, PI / 4, PI]) {
       const d = around(a);
@@ -524,6 +591,8 @@ const MODELS = {
       parts.push(part('spot', '#ffffff', 1, S(0.38, dir[0] * 2.3, 2.8 + dir[1] * 2.3, dir[2] * 2.3)));
     });
     parts.push(part('chimney', '#b5afa4', 2, C(0.3, 0.3, 1.0, 1.0, 5.1, -0.5)));
+    parts.push(on('chimney', part('chimney-cap', '#6b5a4a', 0, C(0.36, 0.36, 0.1, 1.0, 5.65, -0.5))));
+    parts.push(part('smoke', '#f4f4f4', 1, S(0.22, 1.0, 6.0, -0.5), S(0.3, 1.15, 6.4, -0.45)));
     return parts;
   },
 
@@ -533,55 +602,97 @@ const MODELS = {
       B(0.3, 4.1, 0.3, 0.75, 2.3, z, 0, 0, 0.376),
     ];
     const spokes = (z) => [0, PI / 4, PI / 2, (3 * PI) / 4].map((a) => B(4.6, 0.22, 0.12, 0, 4.2, z, 0, 0, a));
+    const bulbs = Array.from({ length: 6 }, (_, k) => S(0.09, 2.4 * Math.cos((k * PI) / 3), 4.2 + 2.4 * Math.sin((k * PI) / 3), 0.7));
     const parts = [
       part('base', '#8a96a8', 5, B(4.4, 0.4, 2.4, 0, 0.2, 0)),
+      fixed(part('queue-posts', '#ffc61a', 0,
+        ...[-1.95, -1.45, -0.95].map((x) => C(0.04, 0.04, 0.45, x, 0.625, 1.05)), B(1.0, 0.04, 0.04, -1.45, 0.8, 1.05))),
+      part('booth', '#f6c26b', 2, B(0.7, 0.9, 0.6, 1.75, 0.85, -0.2)),
+      part('booth-roof', '#e8473b', 1, B(0.9, 0.1, 0.8, 1.75, 1.35, -0.2)),
       part('frame-back', '#c9ced6', 3, ...legs(-0.75)),
       part('frame-front', '#c9ced6', 3, ...legs(0.75)),
       part('hub', '#ffc61a', 2, C(0.35, 0.35, 2.3, 0, 4.2, 0, PI / 2, 0, 0)),
+      on('hub', part('hub-cap', '#e8473b', 0, C(0.45, 0.45, 0.06, 0, 4.2, 1.18, PI / 2, 0, 0))),
       part('spokes-back', '#f4f1ea', 3, ...spokes(-0.55)),
       part('spokes-front', '#f4f1ea', 3, ...spokes(0.55)),
       part('ring-back', '#e8473b', 4, T(2.4, 0.13, 0, 4.2, -0.55)),
       part('ring-front', '#e8473b', 4, T(2.4, 0.13, 0, 4.2, 0.55)),
+      on('ring-front', part('bulbs', '#fff2a8', 0, ...bulbs)),
     ];
     const cabinColors = ['#3c6fd8', '#ffc61a', '#3fae4a', '#ff8a1c', '#9150e6', '#17c3d6'];
     for (let k = 0; k < 6; k++) {
       const a = (k * PI) / 3 + PI / 6;
-      parts.push(part('cabin', cabinColors[k], 2, B(0.6, 0.6, 0.86, 2.4 * Math.cos(a), 4.2 + 2.4 * Math.sin(a) - 0.4, 0)));
+      const cx = 2.4 * Math.cos(a), cy = 4.2 + 2.4 * Math.sin(a) - 0.4;
+      parts.push(part(`cabin-${k}`, cabinColors[k], 2, B(0.6, 0.6, 0.86, cx, cy, 0)));
+      parts.push(on(`cabin-${k}`, part('cabin-roof', '#f4f1ea', 0, B(0.72, 0.08, 0.98, cx, cy + 0.34, 0))));
     }
     return parts;
   },
 
   satellite() {
+    const frame = (sx) => [
+      B(2.6, 0.12, 0.05, sx * 3.1, 3.0, 0),
+      ...[2.4, 3.1, 3.8].map((x) => B(0.05, 0.12, 1.6, sx * x, 3.0, 0)),
+    ];
+    const hatchDir = around(PI / 4);
     return [
       part('stand', '#8a96a8', 3, C(1.2, 1.4, 0.3, 0, 0.15, 0)),
       part('pole', '#8a96a8', 2, C(0.3, 0.3, 1.4, 0, 1.0, 0)),
       part('core', '#e0b54a', 8, C(1.0, 1.0, 2.6, 0, 3.0, 0)),
+      on('core', part('core-band', '#c9ced6', 0, T(1.02, 0.04, 0, 3.0, 0, PI / 2, 0, 0))),
+      part('instrument', '#3b4656', 1, B(0.35, 0.35, 0.25, 0, 3.0, 1.1)),
+      part('instrument', '#3b4656', 1, B(0.35, 0.35, 0.25, 0, 3.0, -1.1)),
+      part('hatch', '#c9ced6', 1, facing(C(0.3, 0.3, 0.06, hatchDir[0] * 1.0, 3.62, hatchDir[2] * 1.0), hatchDir)),
       part('ring-low', '#c9ced6', 3, C(1.1, 1.1, 0.25, 0, 1.9, 0)),
       part('ring-high', '#c9ced6', 3, C(1.1, 1.1, 0.25, 0, 4.2, 0)),
       part('arm-l', '#c9ced6', 1, B(0.9, 0.3, 0.3, -1.4, 3.0, 0)),
       part('arm-r', '#c9ced6', 1, B(0.9, 0.3, 0.3, 1.4, 3.0, 0)),
       glass(part('panel-l', '#3b6fd8', 4, B(2.6, 0.1, 1.6, -3.1, 3.0, 0))),
       glass(part('panel-r', '#3b6fd8', 4, B(2.6, 0.1, 1.6, 3.1, 3.0, 0))),
+      on('panel-l', part('panel-frame', '#dfe3ea', 0, ...frame(-1))),
+      on('panel-r', part('panel-frame', '#dfe3ea', 0, ...frame(1))),
       part('dish', '#f4f1ea', 2, K(1.0, 0.5, 0, 4.6, 0, PI, 0, 0)),
+      on('dish', part('dish-rim', '#ffc61a', 0, T(1.0, 0.05, 0, 4.85, 0, PI / 2, 0, 0))),
       part('antenna', '#3b4656', 1, B(0.25, 0.9, 0.25, 0, 5.3, 0)),
+      on('antenna', part('antenna-tip', '#ff4d5e', 0, S(0.12, 0, 5.8, 0))),
     ];
   },
 
   clocktower() {
+    const windows = [B(0.35, 0.7, 0.06, 0, 2.6, 0.96), B(0.35, 0.7, 0.06, 0, 2.6, -0.96), B(0.06, 0.7, 0.35, 0.96, 2.6, 0), B(0.06, 0.7, 0.35, -0.96, 2.6, 0)];
+    const belfryRail = [B(1.3, 0.06, 0.06, 0, 5.8, 0.8), B(1.3, 0.06, 0.06, 0, 5.8, -0.8), B(0.06, 0.06, 1.3, 0.8, 5.8, 0), B(0.06, 0.06, 1.3, -0.8, 5.8, 0)];
+    const lampPosts = [-1.9, 1.9].flatMap((x) => [C(0.05, 0.05, 1.4, x, 1.1, 1.5), C(0.12, 0.14, 0.08, x, 0.44, 1.5)]);
     const parts = [
       part('plaza', '#b5afa4', 5, C(2.8, 3.0, 0.4, 0, 0.2, 0)),
+      fixed(part('lamp-posts', '#3b4656', 0, ...lampPosts)),
+      part('lamp-l', '#fff2a8', 1, S(0.17, -1.9, 1.9, 1.5)),
+      part('lamp-r', '#fff2a8', 1, S(0.17, 1.9, 1.9, 1.5)),
+      part('bench', '#a8703f', 1,
+        B(0.9, 0.08, 0.35, 0, 0.72, -2.05), B(0.08, 0.3, 0.3, -0.35, 0.55, -2.05), B(0.08, 0.3, 0.3, 0.35, 0.55, -2.05), B(0.9, 0.3, 0.06, 0, 0.95, -2.22)),
+      part('steps', '#9aa3ad', 1, B(1.3, 0.15, 0.5, 0, 0.475, 1.7)),
       part('plinth', '#c7c2b8', 6, B(2.6, 1.2, 2.6, 0, 1.0, 0)),
       part('shaft', '#e9d8b4', 8, B(1.9, 3.6, 1.9, 0, 3.4, 0)),
+      on('shaft', part('windows', '#5b7fb8', 0, ...windows)),
+      on('shaft', part('string-course', '#c7c2b8', 0, B(2.0, 0.14, 2.0, 0, 3.4, 0))),
       part('door', '#8a5a33', 2, B(0.9, 1.1, 0.15, 0, 0.95, 1.35)),
+      on('door', part('door-knob', '#ffc61a', 0, S(0.06, 0.28, 0.95, 1.45))),
       part('ledge', '#c7c2b8', 4, B(2.2, 0.3, 2.2, 0, 5.35, 0)),
+      on('ledge', part('belfry-rail', '#e9d8b4', 0, ...belfryRail)),
       part('bell', '#ffc61a', 1, D(0.45, 0, 5.5, 0)),
     ];
-    for (const a of [0, PI / 2, PI, (3 * PI) / 2]) {
+    [0, PI / 2, PI, (3 * PI) / 2].forEach((a, k) => {
       const d = around(a);
-      parts.push(part('clock', '#fbfbf7', 2, facing(C(0.7, 0.7, 0.15, d[0] * 1.02, 4.4, d[2] * 1.02), d)));
-    }
+      parts.push(part(`clock-${k}`, '#fbfbf7', 2, facing(C(0.7, 0.7, 0.15, d[0] * 1.02, 4.4, d[2] * 1.02), d)));
+      // Hour marks at 12, 3, 6 and 9; the screw in the middle is the pivot.
+      const side = [d[2], 0, -d[0]]; // horizontal direction across the clock face
+      const marks = [[0, 0.55], [0, -0.55], [0.55, 0], [-0.55, 0]].map(([u, v]) =>
+        S(0.055, d[0] * 1.1 + side[0] * u, 4.4 + v, d[2] * 1.1 + side[2] * u));
+      parts.push(on(`clock-${k}`, part('clock-marks', '#3b4656', 0, ...marks)));
+    });
     for (const x of [-0.8, 0.8]) for (const z of [-0.8, 0.8]) parts.push(part('pillar', '#e9d8b4', 1, B(0.3, 1.0, 0.3, x, 6.0, z)));
     parts.push(part('roof', '#2f5fae', 4, K(1.6, 1.6, 0, 7.3, 0)));
+    parts.push(on('roof', part('weather-vane', '#ffc61a', 0,
+      S(0.1, 0, 8.12, 0), C(0.03, 0.03, 0.5, 0, 8.4, 0), B(0.5, 0.06, 0.04, 0, 8.58, 0), K(0.08, 0.16, 0.3, 8.58, 0, 0, 0, -PI / 2))));
     return parts;
   },
 };
@@ -602,14 +713,14 @@ export const LEVELS = [
   { model: 'sailboat', name: 'Sailboat', colors: 5, maxScrews: 27 },
   { model: 'train', name: 'Steam Train', colors: 6, maxScrews: 30, ice: 3 },
   { model: 'balloon', name: 'Hot-Air Balloon', colors: 5, maxScrews: 24 },
-  { model: 'castle', name: 'Castle Gate', colors: 6, maxScrews: 36, ice: 4 },
-  { model: 'pagoda', name: 'Pagoda', colors: 6, maxScrews: 39, ice: 3 },
-  { model: 'tractor', name: 'Tractor', colors: 6, maxScrews: 39, ice: 5 },
-  { model: 'airplane', name: 'Propeller Plane', colors: 6, maxScrews: 36, ice: 4 },
+  { model: 'castle', name: 'Castle Gate', colors: 6, maxScrews: 33, ice: 4 },
+  { model: 'pagoda', name: 'Pagoda', colors: 6, maxScrews: 36, ice: 3 },
+  { model: 'tractor', name: 'Tractor', colors: 6, maxScrews: 27, ice: 5 },
+  { model: 'airplane', name: 'Propeller Plane', colors: 6, maxScrews: 27, ice: 4 },
   { model: 'mushroom', name: 'Mushroom House', colors: 5, maxScrews: 33 },
-  { model: 'ferris', name: 'Ferris Wheel', colors: 7, maxScrews: 45, ice: 4 },
-  { model: 'satellite', name: 'Satellite', colors: 7, maxScrews: 42, ice: 5 },
-  { model: 'clocktower', name: 'Clock Tower', colors: 7, maxScrews: 48, ice: 6 },
+  { model: 'ferris', name: 'Ferris Wheel', colors: 7, maxScrews: 33, ice: 4 },
+  { model: 'satellite', name: 'Satellite', colors: 7, maxScrews: 30, ice: 5 },
+  { model: 'clocktower', name: 'Clock Tower', colors: 7, maxScrews: 36, ice: 6 },
 ];
 
 export function modelParts(name) {
